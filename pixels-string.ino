@@ -266,7 +266,7 @@ void handleClient() {
     response += "\"variation\":" + String(currentVariation) + ",";
     response += "\"variationMax\":" + String(variationsCount[currentEffect]-1) + ",";
     response += "\"power\":\"" + String(powerOn?"on":"off") + "\",";
-    response += "\"numEffects\":" + String(NUM_EFFECTS);
+    response += "\"numEffects\":" + String(NUM_EFFECTS) + ",";
     response += "\"ledCount\":" + String(numLeds);   // add this line
     response += "}";
   }
