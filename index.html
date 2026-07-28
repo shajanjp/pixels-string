@@ -46,7 +46,6 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
             background: radial-gradient(circle at 50% 50%, #1a1926, #0a0a10);
             font-family: sans-serif;
@@ -117,8 +116,11 @@
             .grid-container { grid-template-columns: repeat(3, 1fr); }
         }
         @media (max-width: 600px) {
-            .grid-container { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+            body { padding: 1rem; }
+            .grid-container { grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
             .control-panel { margin-bottom: 1.5rem; }
+            .site-footer { padding: 1rem 0; }
+            .page-title { font-size: 1.75rem; }
         }
 
         /* --- CARD & GLOW --- */
@@ -386,6 +388,7 @@
         }
 
         .site-footer {
+            margin-top: auto;
             position: relative;
             z-index: 2;
             padding: 1.5rem 0;
