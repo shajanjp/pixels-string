@@ -399,7 +399,11 @@ void updateFireflies() {
           fireflies[slot].active = true;
           fireflies[slot].led = led;
           fireflies[slot].brightness = 0;
-          fireflies[slot].maxBrightness = random(80, 160);
+          if (variation == 0) {
+              fireflies[slot].maxBrightness = 25;   // 10 % of 255
+          } else {
+              fireflies[slot].maxBrightness = random(80, 160);
+          }
           fireflies[slot].fadeInSpeed = random(fiSpeedMin[variation] * 10, fiSpeedMax[variation] * 10) / 10.0f;
           fireflies[slot].fadeOutSpeed = random(foSpeedMin[variation] * 10, foSpeedMax[variation] * 10) / 10.0f;
           fireflies[slot].fadingIn = true;
