@@ -5,6 +5,7 @@
 #include <Preferences.h>
 
 #include "config.h"
+#include "dashboard_html.h"
 
 #define MAX_LEDS  300          // upper hardware/software limit
 int numLeds = 50;              // actual number, read from NVS
@@ -327,27 +328,12 @@ void handleClient() {
     client.stop();
     return;
   }
-  else if (path == "/dashboard" || path == "") {
-    client.print("HTTP/1.1 302 Found\r\n");
-    client.print("Location: " DASHBOARD_URL "\r\n");
-    client.print("Connection: close\r\n");
-    client.print("\r\n");
-    client.stop();
-    return;
-  }
-  else if (path == "/") {
-    String html = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
-    html += "<!DOCTYPE html><html><head><title>Pixels String</title>";
-    html += "<style>body{font-family:Arial,sans-serif;margin:40px;background:#111;color:#eee;}";
-    html += "a{color:#6cf;}</style></head><body>";
-    html += "<h1>Pixels String</h1>";
-    html += "<p>A WiFi controlled NeoPixel LED strip with 15 builtin effects,";
-    html += " configurable via a REST API.</p>";
-    html += "<p><a href='" DASHBOARD_URL "'>Dashboard</a> | ";
-    html += "<a href='https://github.com/shajanjp/pixels-string'>GitHub</a></p>";
-    html += "</body></html>";
-
-    client.print(html);
+  else if (path == "/" || path == "") {
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-Type: text/html");
+    client.println("Connection: close");
+    client.println();
+    client.print(dashboard_html);
     client.stop();
     return;
   }

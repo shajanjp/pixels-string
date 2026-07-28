@@ -1,0 +1,2 @@
+# Treat package lock files as binary to avoid merge conflicts and noisy diffs
+package-lock.json binary linguist-generated

@@ -1,0 +1,23 @@
+{
+  "name": "pixels-string",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/shajanjp/pixels-string#readme",
+  "bugs": {
+    "url": "https://github.com/shajanjp/pixels-string/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shajanjp/pixels-string.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "html-to-header.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "html-minifier": "^4.0.0"
+  }
+}

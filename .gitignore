@@ -1,2 +1,3 @@
 config.h
 .DS_Store
+node_modules/
