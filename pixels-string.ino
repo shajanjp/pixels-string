@@ -30,12 +30,13 @@ enum Effect {
   SINGLE_RUNNER,
   AUDIO_VISUALIZER,
   HEARTBEAT,
+  STATIC_PIXEL,
   NUM_EFFECTS
 };
 
 Effect currentEffect = FIREFLIES;
 int currentVariation = 0;
-const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5};
+const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1};
 
 bool powerOn = true;
 
@@ -95,6 +96,7 @@ String effectName(Effect e) {
     case SINGLE_RUNNER: return "SINGLE_RUNNER";
     case AUDIO_VISUALIZER: return "AUDIO_VISUALIZER";
     case HEARTBEAT: return "HEARTBEAT";
+    case STATIC_PIXEL: return "STATIC_PIXEL";
     default: return "UNKNOWN";
   }
 }
@@ -139,6 +141,17 @@ void handleButton() {
   }
   lastReading = reading;
 }
+
+// Forward declarations for static pixel pattern API (defined below)
+extern uint32_t* staticPixelBuffer;
+void freeStaticPixelBuffer();
+uint32_t parseHexColor(const String& hex);
+uint32_t lerpColor(uint32_t c1, uint32_t c2, float t);
+void applyBrightnessToBuffer(uint8_t brightness);
+void generateSolidPattern(const String& colorStr);
+void generateStripedPattern(const String colors[], int numColors);
+void generateGradientPattern(const String colors[], int numColors);
+void updateStaticPixel();
 
 WiFiServer server(80);
 
@@ -295,6 +308,115 @@ void handleClient() {
                  "{\"ledCount\":" + String(numLeds) + "}";
     }
   }
+  else if (path == "/api/pixels/set") {
+    String pattern = getParam(fullPath, "pattern");
+    if (pattern.length() == 0) {
+      response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                 "Connection: close\r\n\r\n"
+                 "{\"status\":\"error\",\"message\":\"Missing 'pattern' parameter\"}";
+      client.print(response);
+      client.stop();
+      return;
+    }
+
+    // Collect all color parameters (repeatable)
+    String colors[10];
+    int numColors = 0;
+    int searchPos = 0;
+    while (numColors < 10) {
+      String key = "color=";
+      int pos = fullPath.indexOf(key, searchPos);
+      if (pos < 0) break;
+      int valStart = pos + key.length();
+      int valEnd = fullPath.indexOf('&', valStart);
+      if (valEnd < 0) valEnd = fullPath.length();
+      String val = fullPath.substring(valStart, valEnd);
+      val.trim();
+      if (val.length() > 0) {
+        colors[numColors++] = val;
+      }
+      searchPos = valEnd;
+    }
+
+    if (numColors == 0) {
+      response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                 "Connection: close\r\n\r\n"
+                 "{\"status\":\"error\",\"message\":\"At least one 'color' parameter is required\"}";
+      client.print(response);
+      client.stop();
+      return;
+    }
+
+    // Validate hex colors
+    for (int i = 0; i < numColors; i++) {
+      String h = colors[i];
+      h.trim();
+      if (h.length() != 3 && h.length() != 6) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                   "Connection: close\r\n\r\n"
+                   "{\"status\":\"error\",\"message\":\"Invalid hex color: " + colors[i] + "\"}";
+        client.print(response);
+        client.stop();
+        return;
+      }
+      for (int j = 0; j < h.length(); j++) {
+        char c = h.charAt(j);
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+          response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                     "Connection: close\r\n\r\n"
+                     "{\"status\":\"error\",\"message\":\"Invalid hex color: " + colors[i] + "\"}";
+          client.print(response);
+          client.stop();
+          return;
+        }
+      }
+    }
+
+    String brightnessStr = getParam(fullPath, "brightness");
+    uint8_t brightVal = (brightnessStr.length() > 0) ? constrain(brightnessStr.toInt(), 0, 255) : 255;
+
+    if (pattern.equalsIgnoreCase("solid")) {
+      generateSolidPattern(colors[0]);
+    } else if (pattern.equalsIgnoreCase("striped")) {
+      generateStripedPattern(colors, numColors);
+    } else if (pattern.equalsIgnoreCase("gradient")) {
+      if (numColors < 2) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                   "Connection: close\r\n\r\n"
+                   "{\"status\":\"error\",\"message\":\"Gradient requires at least 2 colors\"}";
+        client.print(response);
+        client.stop();
+        return;
+      }
+      generateGradientPattern(colors, numColors);
+    } else {
+      response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                 "Connection: close\r\n\r\n"
+                 "{\"status\":\"error\",\"message\":\"Unsupported pattern: " + pattern + "\"}";
+      client.print(response);
+      client.stop();
+      return;
+    }
+
+    if (!staticPixelBuffer) {
+      response = "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\n"
+                 "Connection: close\r\n\r\n"
+                 "{\"status\":\"error\",\"message\":\"Failed to allocate pixel buffer\"}";
+      client.print(response);
+      client.stop();
+      return;
+    }
+
+    applyBrightnessToBuffer(brightVal);
+
+    // Switch to static pixel mode so the pattern persists
+    currentEffect = STATIC_PIXEL;
+    currentVariation = 0;
+
+    response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+               "Connection: close\r\n\r\n"
+               "{\"status\":\"ok\"}";
+  }
   else if (path == "/help") {
     String helpResponse = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n";
     helpResponse += "Neopixel LED Controller REST API\n";
@@ -319,6 +441,11 @@ void handleClient() {
     helpResponse += "  Set the number of LEDs (1-300).\n";
     helpResponse += "GET /api/ledcount\n";
     helpResponse += "  Returns the current number of LEDs as JSON.\n\n";
+    helpResponse += "GET /api/pixels/set?pattern=<solid|striped|gradient>&color=RRGGBB[&color=...][&brightness=0-255]\n";
+    helpResponse += "  Set the entire pixel strip to a static pattern.\n";
+    helpResponse += "  pattern: solid (one color), striped (colors alternate), gradient (interpolated).\n";
+    helpResponse += "  color: hex color(s), 3 or 6 digits, case insensitive. Repeat for multiple.\n";
+    helpResponse += "  brightness: optional, 0-255 (default 255).\n\n";
     helpResponse += "GET /help\n";
     helpResponse += "  This help page.\n\n";
     helpResponse += "All responses are plain text except /api/info and /api/ledcount (JSON).\n";
@@ -1219,6 +1346,7 @@ void updateHeartbeat() {
 }
 
 void resetEffectState() {
+  freeStaticPixelBuffer();
   // Fireflies: clear all fireflies, they will respawn naturally
   for (int i = 0; i < MAX_FIREFLIES; i++) fireflies[i].active = false;
   nextFireflySpawn = millis() + 1000;
@@ -1270,6 +1398,111 @@ void resetEffectState() {
   hbBreathPhase = 0;
   hbTravelPos = 0;
   hbTravelPause = false;
+}
+
+// ===========================  STATIC PIXEL PATTERN API ===========================
+
+uint32_t* staticPixelBuffer = nullptr;
+
+void freeStaticPixelBuffer() {
+  if (staticPixelBuffer) {
+    free(staticPixelBuffer);
+    staticPixelBuffer = nullptr;
+  }
+}
+
+uint32_t parseHexColor(const String& hex) {
+  String h = hex;
+  h.trim();
+  if (h.length() == 3) {
+    char r = h.charAt(0);
+    char g = h.charAt(1);
+    char b = h.charAt(2);
+    h = String(r) + r + g + g + b + b;
+  }
+  long num = strtol(h.c_str(), NULL, 16);
+  return strip.Color((num >> 16) & 0xFF, (num >> 8) & 0xFF, num & 0xFF);
+}
+
+uint32_t lerpColor(uint32_t c1, uint32_t c2, float t) {
+  uint8_t r1 = (c1 >> 16) & 0xFF, g1 = (c1 >> 8) & 0xFF, b1 = c1 & 0xFF;
+  uint8_t r2 = (c2 >> 16) & 0xFF, g2 = (c2 >> 8) & 0xFF, b2 = c2 & 0xFF;
+  return strip.Color(
+    (uint8_t)(r1 + (r2 - r1) * t),
+    (uint8_t)(g1 + (g2 - g1) * t),
+    (uint8_t)(b1 + (b2 - b1) * t)
+  );
+}
+
+void applyBrightnessToBuffer(uint8_t brightness) {
+  if (brightness >= 255) return;
+  float scale = brightness / 255.0f;
+  for (int i = 0; i < numLeds; i++) {
+    uint32_t c = staticPixelBuffer[i];
+    uint8_t r = (uint8_t)(((c >> 16) & 0xFF) * scale);
+    uint8_t g = (uint8_t)(((c >> 8) & 0xFF) * scale);
+    uint8_t b = (uint8_t)((c & 0xFF) * scale);
+    staticPixelBuffer[i] = strip.Color(r, g, b);
+  }
+}
+
+void generateSolidPattern(const String& colorStr) {
+  freeStaticPixelBuffer();
+  staticPixelBuffer = (uint32_t*)malloc(numLeds * sizeof(uint32_t));
+  if (!staticPixelBuffer) return;
+  uint32_t col = parseHexColor(colorStr);
+  for (int i = 0; i < numLeds; i++) {
+    staticPixelBuffer[i] = col;
+  }
+}
+
+void generateStripedPattern(const String colors[], int numColors) {
+  freeStaticPixelBuffer();
+  staticPixelBuffer = (uint32_t*)malloc(numLeds * sizeof(uint32_t));
+  if (!staticPixelBuffer || numColors < 1) return;
+  uint32_t cols[10];
+  for (int i = 0; i < numColors && i < 10; i++) {
+    cols[i] = parseHexColor(colors[i]);
+  }
+  for (int i = 0; i < numLeds; i++) {
+    staticPixelBuffer[i] = cols[i % numColors];
+  }
+}
+
+void generateGradientPattern(const String colors[], int numColors) {
+  freeStaticPixelBuffer();
+  staticPixelBuffer = (uint32_t*)malloc(numLeds * sizeof(uint32_t));
+  if (!staticPixelBuffer || numColors < 2) return;
+
+  uint32_t cols[10];
+  for (int i = 0; i < numColors && i < 10; i++) {
+    cols[i] = parseHexColor(colors[i]);
+  }
+
+  int segments = numColors - 1;
+  int ledsPerSegment = numLeds / segments;
+  int remainder = numLeds % segments;
+  int ledIdx = 0;
+
+  for (int seg = 0; seg < segments; seg++) {
+    int segLen = ledsPerSegment + (seg < remainder ? 1 : 0);
+    uint32_t c1 = cols[seg];
+    uint32_t c2 = cols[seg + 1];
+    for (int j = 0; j < segLen; j++) {
+      float t = (segLen > 1) ? (float)j / (segLen - 1) : 0.0f;
+      if (ledIdx < numLeds) {
+        staticPixelBuffer[ledIdx++] = lerpColor(c1, c2, t);
+      }
+    }
+  }
+}
+
+void updateStaticPixel() {
+  if (!staticPixelBuffer) return;
+  for (int i = 0; i < numLeds; i++) {
+    strip.setPixelColor(i, staticPixelBuffer[i]);
+  }
+  strip.show();
 }
 
 // ===========================  SETUP ===========================
@@ -1377,6 +1610,7 @@ void loop() {
       case SINGLE_RUNNER:    updateSingleRunner(); break;
       case AUDIO_VISUALIZER: updateAudioVisualizer(); break;
       case HEARTBEAT:        updateHeartbeat(); break;
+      case STATIC_PIXEL:       updateStaticPixel(); break;
     }
   }
 

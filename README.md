@@ -169,6 +169,36 @@ Returns the current LED count as JSON.
 
 Plain-text listing of all available endpoints.
 
+### `GET /api/pixels/set`
+
+Set pixel colors with customizable patterns. All parameters are passed as query strings.
+
+**Query Parameters**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `pattern` | **Yes** | Lighting pattern: `solid`, `striped`, or `gradient`. |
+| `color` | **Yes*** | Hex color code(s) without `#`. Can be repeated for multiple colors. |
+| `brightness` | No | Global brightness `0–255` (default: `255`). Applied after pattern generation. |
+
+*At least one `color` is always required.
+
+**Color Format**
+- 6-digit hex: `RRGGBB` (e.g. `FF0000` for red).
+- Optionally allows 3-digit shorthand: `F00` -> `FF0000`.
+- Case insensitive (`ff0000` == `FF0000`).
+- Multiple colors are supplied by repeating the `color` key.
+
+**Examples**
+
+```
+GET /api/pixels/set?pattern=solid&color=FF0000
+
+GET /api/pixels/set?pattern=striped&color=FF0000&color=00FF00&color=0000FF
+
+GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128
+```
+
 ## Effects & Variations
 
 | # | Effect | Variations |
