@@ -68,107 +68,6 @@
                 500px 800px 1px rgba(255,255,255,0.2), 250px 900px 1px rgba(255,255,255,0.5);
         }
 
-        /* --- IP INPUT (inline, always visible) --- */
-        .control-panel {
-            position: relative;
-            z-index: 2;
-            margin-bottom: 2.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.6rem;
-            width: 100%;
-            max-width: 700px;
-        }
-
-        .control-label-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .control-label {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.75rem;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
-            transition: all 0.4s ease;
-            flex-shrink: 0;
-        }
-        .status-dot.is-connected {
-            background: #10b981;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
-        }
-        .status-dot.is-error {
-            background: #ef4444;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
-        }
-
-        .ip-input-wrapper {
-            width: 100%;
-            max-width: 400px;
-            position: relative;
-        }
-
-        #ip-input {
-            width: 100%;
-            padding: 14px 20px 14px 38px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #ffffff;
-            font-size: 0.95rem;
-            outline: none;
-            transition: all 0.3s ease;
-            text-align: center;
-            font-family: 'Courier New', Courier, monospace;
-            letter-spacing: 0.5px;
-        }
-
-        #ip-input::placeholder {
-            color: rgba(255, 255, 255, 0.2);
-            letter-spacing: 1px;
-        }
-
-        #ip-input:hover {
-            background: rgba(255, 255, 255, 0.07);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        #ip-input:focus {
-            border-color: #06b6d4;
-            box-shadow: 0 0 25px rgba(6, 182, 212, 0.25), inset 0 0 20px rgba(6, 182, 212, 0.03);
-            background: rgba(255, 255, 255, 0.07);
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.25);
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-        #ip-input:focus ~ .input-icon {
-            color: rgba(6, 182, 212, 0.6);
-        }
-
         /* --- PAGE HEADER --- */
         .page-header {
             display: flex;
@@ -177,16 +76,27 @@
             justify-content: center;
             width: 100%;
             max-width: 900px;
-            margin-bottom: 1.5rem;
+            margin-bottom: 3rem;
             position: relative;
             z-index: 2;
         }
 
         .page-title {
-            color: #ffffff;
-            font-size: 1.5rem;
-            font-weight: 600;
-            letter-spacing: 1px;
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: linear-gradient(135deg, #c084fc 0%, #a78bfa 25%, #60a5fa 50%, #34d399 75%, #a78bfa 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: title-shimmer 6s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.3));
+        }
+
+        @keyframes title-shimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
         }
 
 
@@ -493,19 +403,7 @@
             outline: 2px solid #06b6d4;
             outline-offset: 4px;
         }
-        #ip-input:focus-visible {
-            outline: 2px solid #06b6d4;
-            outline-offset: 2px;
-        }
 
-        @keyframes statusPulse {
-            0% { opacity: 0.4; transform: scale(0.8); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-        .status-dot.is-connected,
-        .status-dot.is-error {
-            animation: statusPulse 0.4s ease-out;
-        }
 
     </style>
 </head>
@@ -517,22 +415,6 @@
 
     <div class="page-header">
         <h1 class="page-title">Pixels String</h1>
-    </div>
-
-    <div class="control-panel">
-        <div class="control-label-row">
-            <span class="control-label">Target Device IP</span>
-            <span class="status-dot" id="status-dot" aria-label="Connection status"></span>
-        </div>
-        <div class="ip-input-wrapper">
-            <input type="text" id="ip-input" value="" placeholder="192.168.1.55"
-                   aria-label="Target device IP address" autocomplete="url" spellcheck="false">
-            <span class="input-icon" aria-hidden="true">
-                <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor">
-                    <path d="M10 0C6.69 0 4 2.69 4 6c0 2.97 2.16 5.43 5 5.9V19a1 1 0 0 0 2 0v-7.1c2.84-.47 5-2.93 5-5.9 0-3.31-2.69-6-6-6z"/>
-                </svg>
-            </span>
-        </div>
     </div>
 
     <div class="grid-container">
@@ -660,8 +542,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const ipInput = document.getElementById('ip-input');
-            const statusDot = document.getElementById('status-dot');
             const cards = document.querySelectorAll('.card');
 
             // Set ARIA roles for accessibility
@@ -675,61 +555,6 @@
             let lastClickedCard = null;
             // Maps the NEXT variation index to call (0, 1, 2, 3, 4)
             const variationMap = new Map();
-
-            // 1. Get IP from URL / Storage
-            const urlParams = new URLSearchParams(window.location.search);
-            let targetIP = urlParams.get('ip');
-
-            if (!targetIP) {
-                targetIP = localStorage.getItem('ledControllerIP');
-                if (!targetIP) targetIP = '192.168.1.55';
-            }
-
-            ipInput.value = targetIP;
-            localStorage.setItem('ledControllerIP', targetIP);
-
-            ipInput.addEventListener('change', () => {
-                const trimmed = ipInput.value.trim();
-                if (trimmed) {
-                    targetIP = trimmed;
-                    localStorage.setItem('ledControllerIP', targetIP);
-                    checkConnection(trimmed);
-                } else {
-                    ipInput.value = targetIP;
-                }
-            });
-
-            // Debounced input handler updates on typing
-            let connectTimer;
-            ipInput.addEventListener('input', () => {
-                statusDot.className = 'status-dot';
-                clearTimeout(connectTimer);
-                connectTimer = setTimeout(() => {
-                    const trimmed = ipInput.value.trim();
-                    if (trimmed && trimmed !== targetIP) {
-                        targetIP = trimmed;
-                        localStorage.setItem('ledControllerIP', targetIP);
-                    }
-                }, 600);
-            });
-
-            async function checkConnection(ip) {
-                try {
-                    const resp = await fetch(`http://${ip}/api/effect?name=FIREFLIES`, { method: 'HEAD', signal: AbortSignal.timeout(2000) });
-                    if (resp.ok) {
-                        statusDot.className = 'status-dot is-connected';
-                    } else {
-                        statusDot.className = 'status-dot is-error';
-                    }
-                } catch {
-                    statusDot.className = 'status-dot is-error';
-                }
-            }
-
-            // Initial connection check on load
-            if (targetIP) {
-                setTimeout(() => checkConnection(targetIP), 500);
-            }
 
             function removeFeedback(card) {
                 setTimeout(() => {
@@ -775,12 +600,12 @@
                         variationMap.set(card, nextIndex);
                     }
 
-                    // Construct API URL
+                    // Construct API URL (relative, served from same origin)
                     let apiUrl = '';
                     if (apiCallIndex === 0) {
-                        apiUrl = `http://${targetIP}/api/effect?name=${effectName}`;
+                        apiUrl = `/api/effect?name=${effectName}`;
                     } else {
-                        apiUrl = `http://${targetIP}/api/variation?index=${apiCallIndex}`;
+                        apiUrl = `/api/variation?index=${apiCallIndex}`;
                     }
 
                     // Show toast only if Index > 0
