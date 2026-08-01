@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // ----------------- Configuration -----------------
-const INPUT_FILE  = 'index.html';   // your dashboard HTML file
+const INPUT_FILE  = 'dashboard.html';   // your dashboard HTML file
 const OUTPUT_FILE = 'dashboard_html.h';  // generated header file
 const VAR_NAME    = 'dashboard_html';    // C++ variable name
 // -------------------------------------------------

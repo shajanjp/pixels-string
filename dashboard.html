@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixels String - LED Effect Controller</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 2rem;
+            background: radial-gradient(circle at 50% 50%, #17151f, #08080c);
+            font-family: system-ui, sans-serif;
+            color: #e5e5ec;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #c084fc, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .power-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .power-toggle:hover { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+        .power-toggle:active { transform: scale(0.95); }
+        .power-toggle .power-icon {
+            width: 22px; height: 22px; fill: none;
+            stroke: #10b981; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round;
+        }
+        .power-toggle.off .power-icon { stroke: #6b7280; }
+        .power-toggle.is-loading { opacity: 0.6; cursor: wait; }
+        .power-toggle.is-error .power-icon { stroke: #ef4444; }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            width: 100%;
+            max-width: 1000px;
+        }
+        @media (max-width: 600px) {
+            .controls { gap: 0.75rem; }
+            body { padding: 1rem; }
+            .effect-btn { width: 160px; }
+            .dots { gap: 6px; }
+            .dot { width: 12px; height: 12px; }
+        }
+
+        /* Dark button with 7 animated dots */
+        .effect-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 16px;
+            width: 230px;
+            background: #16161d;          /* uniform dark button */
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 18px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .effect-btn:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255,255,255,0.22);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .effect-btn:active { transform: scale(0.97); }
+        .effect-btn:focus-visible { outline: 2px solid #06b6d4; outline-offset: 3px; }
+        .effect-btn.active-selected {
+            border-color: rgba(255,255,255,0.9);
+            box-shadow: 0 0 22px rgba(255,255,255,0.12);
+        }
+        .effect-btn.is-loading { opacity: 0.6; cursor: wait; }
+        .effect-btn.is-error { border-color: rgba(239,68,68,0.5); }
+
+        .dots {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.07);
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.7);
+            transition: background 0.1s ease, box-shadow 0.1s ease;
+            flex-shrink: 0;
+        }
+
+        .btn-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+            text-align: center;
+            word-break: break-word;
+        }
+
+        /* Custom button + modal */
+        .custom-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 22px;
+            border-radius: 999px;
+            background: #16161d;
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #a78bfa;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .custom-button:hover {
+            transform: translateY(-3px);
+            border-color: rgba(167,139,250,0.5);
+            box-shadow: 0 0 18px rgba(167,139,250,0.2);
+        }
+        .custom-button:active { transform: scale(0.96); }
+        .custom-button:focus-visible { outline: 2px solid #06b6d4; outline-offset: 3px; }
+
+        .custom-button-icon {
+            width: 20px; height: 20px; fill: none;
+            stroke: currentColor; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease; padding: 1rem;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal {
+            width: 100%; max-width: 420px;
+            background: #171720;
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transform: translateY(16px) scale(0.97);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal { transform: translateY(0) scale(1); }
+
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+        .modal-header h2 { font-size: 1.1rem; color: #fff; }
+        .modal-close {
+            background: none; border: none;
+            color: rgba(255,255,255,0.4); font-size: 1.5rem; cursor: pointer;
+        }
+        .modal-close:hover { color: rgba(255,255,255,0.85); }
+        .modal-close:focus-visible { outline: 2px solid #06b6d4; }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label {
+            display: block; font-size: 0.75rem; font-weight: 600;
+            color: rgba(255,255,255,0.5); text-transform: uppercase;
+            letter-spacing: 0.07em; margin-bottom: 0.5rem;
+        }
+
+        .pattern-toggle {
+            display: flex; gap: 0.35rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px; padding: 0.3rem;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .pattern-btn {
+            flex: 1; padding: 0.5rem;
+            border: none; border-radius: 9px;
+            background: transparent; color: rgba(255,255,255,0.45);
+            font-size: 0.8rem; cursor: pointer;
+        }
+        .pattern-btn.active { background: rgba(167,139,250,0.22); color: #c4b5fd; }
+
+        .color-pickers { display: flex; flex-direction: column; gap: 0.5rem; }
+        .color-picker-row { display: flex; align-items: center; gap: 0.5rem; }
+        .color-picker-row input[type="color"] {
+            width: 100%; height: 40px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
+        }
+        .remove-color {
+            flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px;
+            border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.35); font-size: 1rem; cursor: pointer;
+        }
+        .remove-color:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.25); color: #ef4444; }
+        .add-color-btn {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.45rem 0.9rem; border-radius: 9px;
+            border: 1px dashed rgba(255,255,255,0.12); background: transparent;
+            color: rgba(255,255,255,0.4); font-size: 0.78rem; cursor: pointer;
+        }
+        .add-color-btn:hover { border-color: rgba(167,139,250,0.3); color: #a78bfa; }
+
+        .brightness-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .brightness-value { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+        input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); accent-color: #8b5cf6; }
+
+        .modal-footer { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+        .modal-footer .btn {
+            flex: 1; padding: 0.65rem 1rem;
+            border-radius: 12px; border: none;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
+        }
+        .btn-secondary { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); }
+        .btn-primary { background: linear-gradient(135deg, #8b5cf6, #a78bfa); color: #fff; }
+        .btn-primary.is-loading { opacity: 0.6; cursor: wait; }
+        .btn-primary.is-error { background: #ef4444; }
+
+        footer { margin-top: auto; padding-top: 1rem; color: rgba(255,255,255,0.35); font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    <h1>Pixels String</h1>
+    <div class="power-toggle on" role="button" tabindex="0" aria-label="Toggle power" id="powerToggle">
+        <svg class="power-icon" viewBox="0 0 24 24"><path d="M12 2v8"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
+    </div>
+
+    <div class="controls" id="controls"></div>
+
+    <div class="custom-button" id="customButton" role="button" tabindex="0" aria-label="Custom color and pattern">
+        <svg class="custom-button-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/></svg>
+        Custom Pixels
+    </div>
+
+    <div class="modal-overlay" id="customModal">
+        <div class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+            <div class="modal-header">
+                <h2 id="modalTitle">Custom Pixels</h2>
+                <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Pattern</label>
+                    <div class="pattern-toggle" role="radiogroup">
+                        <button class="pattern-btn active" data-pattern="solid" role="radio" aria-checked="true">Solid</button>
+                        <button class="pattern-btn" data-pattern="striped" role="radio" aria-checked="false">Striped</button>
+                        <button class="pattern-btn" data-pattern="gradient" role="radio" aria-checked="false">Gradient</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Colors</label>
+                    <div class="color-pickers" id="colorPickers">
+                        <div class="color-picker-row"><input type="color" value="#ff0000"><button class="remove-color" type="button" hidden>&times;</button></div>
+                    </div>
+                    <button class="add-color-btn" id="addColorBtn" hidden>+ Add Color</button>
+                </div>
+                <div class="form-group">
+                    <div class="brightness-header"><label>Brightness</label><span class="brightness-value" id="brightnessValue">255</span></div>
+                    <input type="range" id="brightnessSlider" min="0" max="255" value="255">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+                <button class="btn btn-primary" id="modalApply">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>&copy; 2026 Pixels String.</footer>
+
+    <script>
+        // ==============================================================
+        //  EFFECT DEFINITIONS (names must match pixels-string.ino)
+        // ==============================================================
+        const EFFECTS = [
+            "FIREFLIES", "RAINBOW_SWIPE", "AURORA", "COMET", "CHASING_DOTS",
+            "CYLON", "DUAL_COMET", "SPARKLE_SWEEP", "POLICE", "PLASMA",
+            "RAINBOW_GRADIENT", "PULSE_WAVE", "SINGLE_RUNNER",
+            "AUDIO_VISUALIZER", "HEARTBEAT"
+        ];
+        const DOT_COUNT = 7;
+
+        // ==============================================================
+        //  UTILITY FUNCTIONS
+        // ==============================================================
+        function getDots(btn) {
+            return btn.querySelectorAll('.dot');
+        }
+
+        function setDot(btn, i, r, g, b, brightness) {
+            const dots = getDots(btn);
+            if (i < 0 || i >= dots.length) return;
+            const d = dots[i];
+            brightness = Math.max(0, Math.min(1, brightness || 1));
+            const br = Math.round(r * brightness);
+            const bg = Math.round(g * brightness);
+            const bb = Math.round(b * brightness);
+            d.style.background = `rgb(${br}, ${bg}, ${bb})`;
+            d.style.boxShadow = brightness > 0.35
+                ? `0 0 8px rgba(${r}, ${g}, ${b}, ${0.8 * brightness})`
+                : 'none';
+        }
+
+        function resetDots(btn) {
+            getDots(btn).forEach(d => {
+                d.style.background = 'rgba(255,255,255,0.07)';
+                d.style.boxShadow = 'none';
+            });
+        }
+
+        // Hue (0-255) -> [r, g, b], mirror of wheel() in the .ino file
+        function wheel(pos) {
+            pos = pos & 255;
+            if (pos < 85) return [255 - pos * 3, 0, pos * 3];
+            if (pos < 170) { pos -= 85; return [0, pos * 3, 255 - pos * 3]; }
+            pos -= 170;
+            return [pos * 3, 255 - pos * 3, 0];
+        }
+
+        // ==============================================================
+        //  ANIMATIONS - each one drives its button's dots with setInterval.
+        //  Colors / movement mirror the matching effect in pixels-string.ino.
+        // ==============================================================
+
+        // FIREFLIES: random dots glow amber then fade (matches .ino firefly)
+        function animateFireflies(btn) {
+            const state = { a: [] }; // active dots with current brightness
+            return setInterval(() => {
+                // spawn a new firefly occasionally
+                if (state.a.length < 3 && Math.random() < 0.4) {
+                    const idx = Math.floor(Math.random() * DOT_COUNT);
+                    if (!state.a.some(f => f.i === idx)) {
+                        state.a.push({ i: idx, b: 0.2, dir: 1 });
+                    }
+                }
+                resetDots(btn);
+                state.a = state.a.filter(f => f.b > 0.01);
+                for (const f of state.a) {
+                    f.b += f.dir * 0.15;
+                    if (f.b >= 1) { f.b = 1; f.dir = -1; }
+                    setDot(btn, f.i, 255, 200, 64, f.b); // amber
+                }
+            }, 150);
+        }
+
+        // RAINBOW_SWIPE: rainbow hue travels across the dots
+        function animateRainbowSwipe(btn) {
+            let offset = 0;
+            return setInterval(() => {
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const [r, g, b] = wheel((i * 36 + offset) & 255);
+                    setDot(btn, i, r, g, b, 1);
+                }
+                offset = (offset + 20) & 255;
+            }, 110);
+        }
+
+        // AURORA: green/purple waves wash across
+        function animateAurora(btn) {
+            let phase = 0;
+            return setInterval(() => {
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const pos = i / DOT_COUNT;
+                    const wave = Math.sin(pos * 5 + phase) * 0.5 + 0.5;
+                    const bright = 0.2 + wave * 0.8;
+                    const [r, g, b] = i % 2 === 0 ? [110, 247, 200] : [197, 139, 255];
+                    setDot(btn, i, r, g, b, bright);
+                }
+                phase += 0.4;
+            }, 180);
+        }
+
+        // COMET: bright head with fading tail travels and wraps
+        function animateComet(btn) {
+            let head = 0;
+            const tail = 3;
+            return setInterval(() => {
+                resetDots(btn);
+                for (let t = 0; t <= tail; t++) {
+                    const idx = ((head - t) % DOT_COUNT + DOT_COUNT) % DOT_COUNT;
+                    const [r, g, b] = wheel(idx * 40 + 80);
+                    setDot(btn, idx, r, g, b, 1 - t / (tail + 1));
+                }
+                head = (head + 1) % DOT_COUNT;
+            }, 170);
+        }
+
+        // CHASING_DOTS: several colored dots race around the loop
+        function animateChasingDots(btn) {
+            const colors = [
+                [255, 77, 77], [255, 159, 77], [255, 233, 77], [125, 255, 77],
+                [77, 255, 208], [77, 157, 255], [196, 77, 255]
+            ];
+            let positions = [0, 3, 5];
+            return setInterval(() => {
+                resetDots(btn);
+                positions.forEach((p, i) => setDot(btn, p, ...colors[i], 1));
+                positions = positions.map(p => (p + 1) % DOT_COUNT);
+            }, 140);
+        }
+
+        // CYLON: bright bar sweeps left <-> right
+        function animateCylon(btn) {
+            let pos = 0, dir = 1;
+            return setInterval(() => {
+                resetDots(btn);
+                for (let i = -1; i <= 1; i++) {
+                    const idx = pos + i;
+                    if (idx < 0 || idx >= DOT_COUNT) continue;
+                    setDot(btn, idx, 43, 224, 255, 1 - Math.abs(i) * 0.4);
+                }
+                pos += dir;
+                if (pos >= DOT_COUNT) { pos = DOT_COUNT - 1; dir = -1; }
+                if (pos < 0) { pos = 0; dir = 1; }
+            }, 120);
+        }
+
+        // DUAL_COMET: comets from both ends collide in the center
+        function animateDualComet(btn) {
+            let left = 0, right = DOT_COUNT - 1;
+            return setInterval(() => {
+                resetDots(btn);
+                for (let t = 0; t <= 2; t++) {
+                    const l = left - t;
+                    const r = right + t;
+                    if (l >= 0) setDot(btn, l, ...wheel(40), 1 - t * 0.3);
+                    if (r <= DOT_COUNT - 1) setDot(btn, r, ...wheel(200), 1 - t * 0.3);
+                }
+                if (left < right) { left++; right--; }
+                else { left = 0; right = DOT_COUNT - 1; }
+            }, 150);
+        }
+
+        // SPARKLE_SWEEP: white sparkles sweep along
+        function animateSparkleSweep(btn) {
+            let center = 0;
+            const half = 2;
+            return setInterval(() => {
+                resetDots(btn);
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    if (Math.abs(i - center) <= half && Math.random() < 0.7) {
+                        setDot(btn, i, 255, 255, 255, 0.6 + Math.random() * 0.4);
+                    }
+                }
+                center = (center + 1) % DOT_COUNT;
+            }, 150);
+        }
+
+        // POLICE: alternating red/blue flash
+        function animatePolice(btn) {
+            let state = false;
+            return setInterval(() => {
+                state = !state;
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const isEven = i % 2 === 0;
+                    if (isEven) setDot(btn, i, state ? 255 : 0, 0, state ? 0 : 255, 1);
+                    else setDot(btn, i, state ? 0 : 255, 0, state ? 255 : 0, 1);
+                }
+            }, 400);
+        }
+
+        // PLASMA: undulating colored blobs
+        function animatePlasma(btn) {
+            let phase = 0;
+            return setInterval(() => {
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const pos = i / DOT_COUNT;
+                    const wave = Math.sin(pos * 4 + phase) * 0.5 +
+                                 Math.sin(pos * 2 - phase * 0.7) * 0.3 +
+                                 Math.sin(pos * 8 + phase * 1.3) * 0.2;
+                    const bright = 0.3 + Math.abs(wave) * 0.7;
+                    const [r, g, b] = wheel((i * 40 + phase * 30) & 255);
+                    setDot(btn, i, r, g, b, bright);
+                }
+                phase += 0.3;
+            }, 150);
+        }
+
+        // RAINBOW_GRADIENT: rainbow window travels across
+        function animateRainbowGrad(btn) {
+            let start = 0;
+            const win = 4;
+            return setInterval(() => {
+                resetDots(btn);
+                for (let i = 0; i < win; i++) {
+                    const idx = (start + i) % DOT_COUNT;
+                    const [r, g, b] = wheel(i * (255 / win));
+                    setDot(btn, idx, r, g, b, 1);
+                }
+                start = (start + 1) % DOT_COUNT;
+            }, 150);
+        }
+
+        // PULSE_WAVE: a bright pulse travels along
+        function animatePulseWave(btn) {
+            let pos = 0;
+            return setInterval(() => {
+                resetDots(btn);
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const dist = Math.abs(i - pos);
+                    const bright = Math.exp(-(dist * dist) / 4);
+                    const [r, g, b] = wheel(pos * 36 + 120);
+                    setDot(btn, i, r, g, b, bright);
+                }
+                pos = (pos + 1) % DOT_COUNT;
+            }, 150);
+        }
+
+        // SINGLE_RUNNER: one bright pixel races back and forth
+        function animateSingleRunner(btn) {
+            let pos = 0, dir = 1;
+            return setInterval(() => {
+                resetDots(btn);
+                const [r, g, b] = wheel(pos * 36);
+                setDot(btn, pos, r, g, b, 1);
+                pos += dir;
+                if (pos >= DOT_COUNT) { pos = DOT_COUNT - 1; dir = -1; }
+                if (pos < 0) { pos = 0; dir = 1; }
+            }, 200);
+        }
+
+        // AUDIO_VISUALIZER: dots bounce like audio bars
+        function animateAudioViz(btn) {
+            let t = 0;
+            const heights = [0.4, 0.6, 1.0, 0.75, 0.45, 0.65, 0.5];
+            return setInterval(() => {
+                t += 0.3;
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const amp = Math.max(0.15, Math.abs(Math.sin(i * 1.2 + t)) * 0.5 + heights[i] * 0.3);
+                    setDot(btn, i, 77, 243, 255, amp);
+                }
+            }, 140);
+        }
+
+        // HEARTBEAT: all dots pulse with a lub-dub rhythm
+        function animateHeartbeat(btn) {
+            let t = 0;
+            return setInterval(() => {
+                t += 0.15;
+                const phase = (t * 10) % 10;
+                const beat = Math.exp(-Math.pow(phase - 2, 2) / 2) +
+                             Math.exp(-Math.pow(phase - 4, 2) / 2);
+                const bright = 0.15 + Math.min(1, beat) * 0.85;
+                for (let i = 0; i < DOT_COUNT; i++) setDot(btn, i, 255, 77, 77, bright);
+            }, 100);
+        }
+
+        // Map effect name -> its animation function
+        const ANIMATIONS = {
+            FIREFLIES: animateFireflies,
+            RAINBOW_SWIPE: animateRainbowSwipe,
+            AURORA: animateAurora,
+            COMET: animateComet,
+            CHASING_DOTS: animateChasingDots,
+            CYLON: animateCylon,
+            DUAL_COMET: animateDualComet,
+            SPARKLE_SWEEP: animateSparkleSweep,
+            POLICE: animatePolice,
+            PLASMA: animatePlasma,
+            RAINBOW_GRADIENT: animateRainbowGrad,
+            PULSE_WAVE: animatePulseWave,
+            SINGLE_RUNNER: animateSingleRunner,
+            AUDIO_VISUALIZER: animateAudioViz,
+            HEARTBEAT: animateHeartbeat
+        };
+
+        // ==============================================================
+        //  BUILD THE BUTTONS + START ANIMATIONS
+        // ==============================================================
+        function buildButton(name) {
+            const btn = document.createElement('div');
+            btn.className = 'effect-btn';
+            btn.id = name;                       // id = animation name
+            btn.setAttribute('role', 'button');
+            btn.setAttribute('tabindex', '0');
+            btn.setAttribute('aria-label', `Activate ${name.replace(/_/g, ' ')} effect`);
+
+            const dots = document.createElement('div');
+            dots.className = 'dots';
+            // 7 dots with classes 1..7
+            for (let i = 1; i <= DOT_COUNT; i++) {
+                const dot = document.createElement('span');
+                dot.className = 'dot ' + i;
+                dots.appendChild(dot);
+            }
+
+            const label = document.createElement('span');
+            label.className = 'btn-label';
+            label.textContent = name.replace(/_/g, ' ');
+
+            btn.appendChild(dots);
+            btn.appendChild(label);
+            return btn;
+        }
+
+        const controls = document.getElementById('controls');
+        const intervals = new Map();
+        let lastClicked = null;
+
+        EFFECTS.forEach(name => {
+            const btn = buildButton(name);
+            controls.appendChild(btn);
+            ANIMATIONS[name](btn); // each animation sets up its own setInterval
+        });
+
+        // ==============================================================
+        //  CLICK HANDLER - send effect / variation to the ESP32
+        // ==============================================================
+        const variations = new Map(); // button -> current variation index
+        document.querySelectorAll('.effect-btn').forEach(btn => {
+            variations.set(btn, 0);
+            btn.addEventListener('click', async () => {
+                if (btn.classList.contains('is-loading')) return;
+                const name = btn.id;
+                let apiIndex = 0;
+                if (lastClicked !== btn) {
+                    document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active-selected'));
+                    btn.classList.add('active-selected');
+                    variations.set(btn, 0);
+                    lastClicked = btn;
+                } else {
+                    apiIndex = variations.get(btn);
+                    const next = (apiIndex + 1) % 5;
+                    variations.set(btn, next);
+                    apiIndex = next;
+                }
+                const url = apiIndex === 0
+                    ? `/api/effect?name=${name}`
+                    : `/api/variation?index=${apiIndex}`;
+                btn.classList.add('is-loading');
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) btn.classList.add('is-error');
+                } catch (e) {
+                    btn.classList.add('is-error');
+                } finally {
+                    btn.classList.remove('is-loading');
+                    setTimeout(() => btn.classList.remove('is-error'), 1000);
+                }
+            });
+            btn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+            });
+        });
+
+        // ==============================================================
+        //  POWER TOGGLE
+        // ==============================================================
+        // ==============================================================
+        //  CUSTOM PIXELS BUTTON + MODAL
+        // ==============================================================
+        const customButton = document.getElementById('customButton');
+        const customModal = document.getElementById('customModal');
+        const modalClose = document.getElementById('modalClose');
+        const modalCancel = document.getElementById('modalCancel');
+        const modalApply = document.getElementById('modalApply');
+        const patternButtons = document.querySelectorAll('.pattern-btn');
+        const colorPickersContainer = document.getElementById('colorPickers');
+        const addColorBtn = document.getElementById('addColorBtn');
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        const brightnessValue = document.getElementById('brightnessValue');
+
+        let currentPattern = 'solid';
+
+        patternButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                patternButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
+                btn.classList.add('active');
+                btn.setAttribute('aria-checked', 'true');
+                currentPattern = btn.dataset.pattern;
+                synchronizeColorPickers();
+            });
+        });
+
+        function synchronizeColorPickers() {
+            const currentCount = colorPickersContainer.children.length;
+            let targetCount = currentPattern === 'solid' ? 1 : Math.max(2, currentCount);
+            while (colorPickersContainer.children.length < targetCount) addColorPicker();
+            while (colorPickersContainer.children.length > targetCount) colorPickersContainer.removeChild(colorPickersContainer.lastChild);
+            addColorBtn.hidden = currentPattern === 'solid';
+            updateRemoveButtons();
+        }
+
+        function addColorPicker() {
+            const row = document.createElement('div');
+            row.className = 'color-picker-row';
+            const index = colorPickersContainer.children.length + 1;
+            row.innerHTML = `<input type="color" value="#ff0000" aria-label="Color ${index}"><button class="remove-color" type="button" aria-label="Remove color">&times;</button>`;
+            row.querySelector('.remove-color').addEventListener('click', () => {
+                if (colorPickersContainer.children.length > 2) {
+                    row.remove();
+                    updateRemoveButtons();
+                    relabelColorPickers();
+                }
+            });
+            colorPickersContainer.appendChild(row);
+            updateRemoveButtons();
+            relabelColorPickers();
+        }
+
+        function updateRemoveButtons() {
+            colorPickersContainer.querySelectorAll('.remove-color').forEach(btn => {
+                btn.hidden = currentPattern === 'solid' || colorPickersContainer.children.length <= 2;
+            });
+        }
+
+        function relabelColorPickers() {
+            colorPickersContainer.querySelectorAll('input[type="color"]').forEach((input, i) => {
+                input.setAttribute('aria-label', `Color ${i + 1}`);
+            });
+        }
+
+        addColorBtn.addEventListener('click', () => {
+            if (colorPickersContainer.children.length < 10) addColorPicker();
+        });
+
+        brightnessSlider.addEventListener('input', () => { brightnessValue.textContent = brightnessSlider.value; });
+
+        function openModal() {
+            customModal.classList.add('active');
+            setTimeout(() => patternButtons[0].focus(), 100);
+        }
+        function closeModal() { customModal.classList.remove('active'); }
+
+        customButton.addEventListener('click', openModal);
+        customButton.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(); }
+        });
+        modalClose.addEventListener('click', closeModal);
+        modalCancel.addEventListener('click', closeModal);
+        customModal.addEventListener('click', (e) => { if (e.target === customModal) closeModal(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && customModal.classList.contains('active')) closeModal();
+        });
+
+        modalApply.addEventListener('click', async () => {
+            if (modalApply.classList.contains('is-loading')) return;
+            const colorInputs = colorPickersContainer.querySelectorAll('input[type="color"]');
+            const colors = [];
+            colorInputs.forEach(input => colors.push(input.value.substring(1)));
+            const brightness = parseInt(brightnessSlider.value, 10);
+            let url = `/api/pixels/set?pattern=${currentPattern}`;
+            colors.forEach(c => { url += `&color=${c}`; });
+            if (brightness < 255) url += `&brightness=${brightness}`;
+            modalApply.classList.add('is-loading');
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    modalApply.classList.remove('is-loading');
+                    document.querySelectorAll('.effect-btn').forEach(c => c.classList.remove('active-selected'));
+                    setTimeout(closeModal, 400);
+                } else {
+                    modalApply.classList.remove('is-loading');
+                    modalApply.classList.add('is-error');
+                }
+            } catch (e) {
+                modalApply.classList.remove('is-loading');
+                modalApply.classList.add('is-error');
+            } finally {
+                setTimeout(() => modalApply.classList.remove('is-error'), 1500);
+            }
+        });
+
+        const powerToggle = document.getElementById('powerToggle');
+        async function fetchPowerState() {
+            try {
+                const res = await fetch('/api/info');
+                if (res.ok) {
+                    const data = await res.json();
+                    const on = data.power === 'on';
+                    powerToggle.classList.toggle('on', on);
+                    powerToggle.classList.toggle('off', !on);
+                }
+            } catch (e) { console.error('fetch power state failed', e); }
+        }
+        powerToggle.addEventListener('click', async () => {
+            const isOn = powerToggle.classList.contains('on');
+            const newState = isOn ? 'off' : 'on';
+            powerToggle.classList.add('is-loading');
+            try {
+                const res = await fetch(`/api/power?state=${newState}`);
+                if (res.ok) {
+                    powerToggle.classList.toggle('on', newState === 'on');
+                    powerToggle.classList.toggle('off', newState !== 'on');
+                } else {
+                    powerToggle.classList.add('is-error');
+                }
+            } catch (e) {
+                powerToggle.classList.add('is-error');
+            } finally {
+                powerToggle.classList.remove('is-loading');
+                setTimeout(() => powerToggle.classList.remove('is-error'), 1000);
+            }
+        });
+        powerToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); powerToggle.click(); }
+        });
+
+        fetchPowerState();
+    </script>
+</body>
+</html>
