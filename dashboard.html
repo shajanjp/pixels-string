@@ -74,6 +74,75 @@
             color: rgba(255,255,255,0.55);
         }
 
+        .settings-panel {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            width: 100%;
+            max-width: 480px;
+            padding: 0.9rem 1.1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+        }
+        .settings-section {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .settings-divider {
+            flex-shrink: 0;
+            width: 1px;
+            height: 40px;
+            background: rgba(255,255,255,0.08);
+        }
+
+        .led-count-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .led-count-row input[type="number"] {
+            flex: 1;
+            min-width: 0;
+            padding: 0.5rem 0.6rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: #e5e5ec;
+            font-size: 0.9rem;
+        }
+        .led-count-row input[type="number"].is-invalid {
+            border-color: rgba(239,68,68,0.6);
+        }
+        .led-count-error {
+            font-size: 0.7rem;
+            color: #ef4444;
+            margin-top: -0.25rem;
+        }
+        .led-count-error[hidden] { display: none; }
+        .led-count-row input[type="number"]:focus-visible {
+            outline: 2px solid #06b6d4;
+            outline-offset: 2px;
+        }
+        .led-count-update {
+            flex-shrink: 0;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.15s ease;
+        }
+        .led-count-update:hover { transform: translateY(-1px); }
+        .led-count-update:active { transform: scale(0.96); }
+        .led-count-update.is-loading { opacity: 0.6; cursor: wait; }
+        .led-count-update.is-error { background: #ef4444; }
+
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -84,6 +153,8 @@
         }
         @media (max-width: 600px) {
             .controls { gap: 0.75rem; }
+            .settings-panel { flex-direction: column; align-items: stretch; max-width: 280px; }
+            .settings-divider { width: 100%; height: 1px; }
             body { padding: 1rem; }
             .effect-btn { width: 160px; }
             .dots { gap: 6px; }
@@ -272,12 +343,27 @@
         <svg class="power-icon" viewBox="0 0 24 24"><path d="M12 2v8"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
     </div>
 
-    <div class="brightness-control" id="brightnessControl">
-        <div class="brightness-control-header">
-            <label for="globalBrightnessSlider">Brightness</label>
-            <span class="brightness-value" id="globalBrightnessValue">100</span>
+    <div class="settings-panel">
+        <div class="settings-section">
+            <div class="brightness-control-header">
+                <label for="ledCountInput">Number of LEDs</label>
+            </div>
+            <div class="led-count-row">
+                <input type="number" id="ledCountInput" min="1" max="300" value="1" aria-label="Number of LEDs">
+                <button class="led-count-update" id="ledCountUpdate" type="button">Update</button>
+            </div>
+            <div class="led-count-error" id="ledCountError" hidden>Enter a value between 1 and 300</div>
         </div>
-        <input type="range" id="globalBrightnessSlider" min="0" max="100" value="100" aria-label="Global brightness">
+
+        <div class="settings-divider"></div>
+
+        <div class="settings-section">
+            <div class="brightness-control-header">
+                <label for="globalBrightnessSlider">Brightness</label>
+                <span class="brightness-value" id="globalBrightnessValue">100</span>
+            </div>
+            <input type="range" id="globalBrightnessSlider" min="0" max="100" value="100" aria-label="Global brightness">
+        </div>
     </div>
 
     <div class="controls" id="controls"></div>
@@ -826,6 +912,10 @@
                     const on = data.power === 'on';
                     powerToggle.classList.toggle('on', on);
                     powerToggle.classList.toggle('off', !on);
+                    if (typeof data.ledCount === 'number') {
+                        ledCountInput.value = String(data.ledCount);
+                        setLedCountError(false);
+                    }
                     if (typeof data.brightness === 'number') {
                         const pct = Math.round(data.brightness * 100 / 255);
                         globalBrightnessSlider.value = String(pct);
@@ -883,6 +973,60 @@
         globalBrightnessSlider.addEventListener('change', () => {
             clearTimeout(brightnessSendTimer);
             sendGlobalBrightness(parseInt(globalBrightnessSlider.value, 10));
+        });
+
+        // ==============================================================
+        //  LED COUNT CONTROL
+        // ==============================================================
+        const LED_COUNT_MIN = 1;
+        const LED_COUNT_MAX = 300;
+        const ledCountInput = document.getElementById('ledCountInput');
+        const ledCountUpdate = document.getElementById('ledCountUpdate');
+        const ledCountError = document.getElementById('ledCountError');
+
+        function setLedCountError(show) {
+            ledCountError.hidden = !show;
+            ledCountInput.classList.toggle('is-invalid', show);
+        }
+
+        function ledCountValid() {
+            const count = parseInt(ledCountInput.value, 10);
+            return !isNaN(count) && count >= LED_COUNT_MIN && count <= LED_COUNT_MAX;
+        }
+
+        async function sendLedCount(count) {
+            ledCountUpdate.classList.add('is-loading');
+            try {
+                const res = await fetch(`/api/ledcount?count=${count}`);
+                if (!res.ok) ledCountUpdate.classList.add('is-error');
+            } catch (e) {
+                ledCountUpdate.classList.add('is-error');
+                console.error('set led count failed', e);
+            } finally {
+                ledCountUpdate.classList.remove('is-loading');
+                setTimeout(() => ledCountUpdate.classList.remove('is-error'), 1000);
+            }
+        }
+
+        ledCountUpdate.addEventListener('click', () => {
+            if (ledCountUpdate.classList.contains('is-loading')) return;
+            if (!ledCountValid()) {
+                setLedCountError(true);
+                ledCountInput.focus();
+                ledCountUpdate.classList.add('is-error');
+                setTimeout(() => ledCountUpdate.classList.remove('is-error'), 1500);
+                return;
+            }
+            setLedCountError(false);
+            sendLedCount(parseInt(ledCountInput.value, 10));
+        });
+
+        ledCountInput.addEventListener('input', () => {
+            if (ledCountValid()) setLedCountError(false);
+        });
+
+        ledCountInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); ledCountUpdate.click(); }
         });
 
         fetchPowerState();
