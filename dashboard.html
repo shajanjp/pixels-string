@@ -50,6 +50,30 @@
         .power-toggle.is-loading { opacity: 0.6; cursor: wait; }
         .power-toggle.is-error .power-icon { stroke: #ef4444; }
 
+        .brightness-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 100%;
+            max-width: 280px;
+            padding: 0.9rem 1.1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+        }
+        .brightness-control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .brightness-control-header label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+        }
+
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -246,6 +270,14 @@
     <h1>Pixels String</h1>
     <div class="power-toggle on" role="button" tabindex="0" aria-label="Toggle power" id="powerToggle">
         <svg class="power-icon" viewBox="0 0 24 24"><path d="M12 2v8"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
+    </div>
+
+    <div class="brightness-control" id="brightnessControl">
+        <div class="brightness-control-header">
+            <label for="globalBrightnessSlider">Brightness</label>
+            <span class="brightness-value" id="globalBrightnessValue">100</span>
+        </div>
+        <input type="range" id="globalBrightnessSlider" min="0" max="100" value="100" aria-label="Global brightness">
     </div>
 
     <div class="controls" id="controls"></div>
@@ -771,6 +803,7 @@
                 if (res.ok) {
                     modalApply.classList.remove('is-loading');
                     document.querySelectorAll('.effect-btn').forEach(c => c.classList.remove('active-selected'));
+                    fetchPowerState();
                     setTimeout(closeModal, 400);
                 } else {
                     modalApply.classList.remove('is-loading');
@@ -793,6 +826,11 @@
                     const on = data.power === 'on';
                     powerToggle.classList.toggle('on', on);
                     powerToggle.classList.toggle('off', !on);
+                    if (typeof data.brightness === 'number') {
+                        const pct = Math.round(data.brightness * 100 / 255);
+                        globalBrightnessSlider.value = String(pct);
+                        setBrightnessDisplay(pct);
+                    }
                 }
             } catch (e) { console.error('fetch power state failed', e); }
         }
@@ -817,6 +855,34 @@
         });
         powerToggle.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); powerToggle.click(); }
+        });
+
+        const globalBrightnessSlider = document.getElementById('globalBrightnessSlider');
+        const globalBrightnessValue = document.getElementById('globalBrightnessValue');
+        let brightnessSendTimer = null;
+        let lastSentBrightness = -1;
+
+        function setBrightnessDisplay(value) {
+            globalBrightnessValue.textContent = String(value);
+        }
+
+        function sendGlobalBrightness(value) {
+            if (value === lastSentBrightness) return;
+            lastSentBrightness = value;
+            const value255 = Math.round(value * 255 / 100);
+            fetch(`/api/brightness?value=${value255}`)
+                .catch(e => console.error('set brightness failed', e));
+        }
+
+        globalBrightnessSlider.addEventListener('input', () => {
+            const value = parseInt(globalBrightnessSlider.value, 10);
+            setBrightnessDisplay(value);
+            clearTimeout(brightnessSendTimer);
+            brightnessSendTimer = setTimeout(() => sendGlobalBrightness(value), 250);
+        });
+        globalBrightnessSlider.addEventListener('change', () => {
+            clearTimeout(brightnessSendTimer);
+            sendGlobalBrightness(parseInt(globalBrightnessSlider.value, 10));
         });
 
         fetchPowerState();

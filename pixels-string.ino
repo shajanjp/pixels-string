@@ -39,6 +39,7 @@ int currentVariation = 0;
 const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1};
 
 bool powerOn = true;
+uint8_t globalBrightness = 255;   // 0-255, applied globally via strip.setBrightness()
 
 // ===========================  BUTTON STATE ===========================
 bool buttonState = HIGH;
@@ -77,6 +78,15 @@ String getParam(const String& url, const String& param) {
   if (end < 0) end = url.indexOf(' ', start);
   if (end < 0) end = url.length();
   return url.substring(start, end);
+}
+
+// Global brightness 0 (off) .. 255 (max). Applied at the hardware level via
+// strip.setBrightness(), so it scales every effect on show(). Note: Adafruit's
+// setBrightness(0) means "no scaling" (full brightness), so 0 is mapped to 1
+// to actually turn the LEDs off.
+void setGlobalBrightness(uint8_t b) {
+  globalBrightness = constrain(b, 0, 255);
+  strip.setBrightness(globalBrightness == 0 ? 1 : globalBrightness);
 }
 
 String effectName(Effect e) {
@@ -271,6 +281,34 @@ void handleClient() {
     if (state.equalsIgnoreCase("on")) { powerOn = true; response += "Power ON\n"; }
     else if (state.equalsIgnoreCase("off")) { powerOn = false; response += "Power OFF\n"; }
   }
+  else if (path == "/api/brightness") {
+    String valueStr = getParam(fullPath, "value");
+    if (valueStr.length() > 0) {
+      bool isNumeric = true;
+      for (int i = 0; i < valueStr.length(); i++)
+        if (!isdigit(valueStr.charAt(i))) { isNumeric = false; break; }
+      int v = valueStr.toInt();
+      if (isNumeric && v >= 0 && v <= 255) {
+        setGlobalBrightness((uint8_t)v);
+        prefs.putInt("brightness", globalBrightness);
+        response += "Brightness set to " + String(globalBrightness) + "\n";
+      } else {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n"
+                   "Connection: close\r\n\r\n"
+                   "Invalid brightness. Must be 0-255";
+        client.print(response);
+        client.stop();
+        return;
+      }
+    } else {
+      response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n"
+                 "Connection: close\r\n\r\n"
+                 "Missing 'value' parameter (0-255). Current brightness is " + String(globalBrightness) + ".";
+      client.print(response);
+      client.stop();
+      return;
+    }
+  }
   else if (path == "/api/info") {
     response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n";
     response += "{";
@@ -280,7 +318,8 @@ void handleClient() {
     response += "\"variationMax\":" + String(variationsCount[currentEffect]-1) + ",";
     response += "\"power\":\"" + String(powerOn?"on":"off") + "\",";
     response += "\"numEffects\":" + String(NUM_EFFECTS) + ",";
-    response += "\"ledCount\":" + String(numLeds);   // add this line
+    response += "\"ledCount\":" + String(numLeds) + ",";
+    response += "\"brightness\":" + String(globalBrightness);
     response += "}";
   }
   else if (path == "/api/ledcount") {
@@ -372,8 +411,26 @@ void handleClient() {
       }
     }
 
+    // Brightness is unified with the global brightness variable: an explicit
+    // value updates the global brightness (persisted, applies to every effect).
+    // The buffer stays at full color; strip.setBrightness() scales it at show
+    // time, so there is no double-scaling. Omit to keep the current value.
     String brightnessStr = getParam(fullPath, "brightness");
-    uint8_t brightVal = (brightnessStr.length() > 0) ? constrain(brightnessStr.toInt(), 0, 255) : 255;
+    if (brightnessStr.length() > 0) {
+      bool isNumeric = true;
+      for (int i = 0; i < brightnessStr.length(); i++)
+        if (!isdigit(brightnessStr.charAt(i))) { isNumeric = false; break; }
+      if (!isNumeric) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                   "Connection: close\r\n\r\n"
+                   "{\"status\":\"error\",\"message\":\"Invalid brightness value\"}";
+        client.print(response);
+        client.stop();
+        return;
+      }
+      setGlobalBrightness((uint8_t)constrain(brightnessStr.toInt(), 0, 255));
+      prefs.putInt("brightness", globalBrightness);
+    }
 
     if (pattern.equalsIgnoreCase("solid")) {
       generateSolidPattern(colors[0]);
@@ -407,7 +464,8 @@ void handleClient() {
       return;
     }
 
-    applyBrightnessToBuffer(brightVal);
+    // No per-pattern brightness bake: the global brightness (set above or the
+    // current value) is applied by strip.setBrightness() at show time.
 
     // Switch to static pixel mode so the pattern persists
     currentEffect = STATIC_PIXEL;
@@ -434,6 +492,10 @@ void handleClient() {
     helpResponse += "  Set the variation of the current effect (0-based).\n\n";
     helpResponse += "GET /api/power?state=<on|off>\n";
     helpResponse += "  Turn the LEDs on or off.\n\n";
+    helpResponse += "GET /api/brightness?value=<0-255>\n";
+    helpResponse += "  Set the global LED brightness (0 = off, 255 = max).\n";
+    helpResponse += "  Applied to every effect and saved across reboots.\n";
+    helpResponse += "  Read the current value from /api/info.\n\n";
     helpResponse += "GET /api/info\n";
     helpResponse += "  Returns a JSON object with current effect, variation, power state,\n";
     helpResponse += "  effect count, and led count.\n\n";
@@ -445,7 +507,9 @@ void handleClient() {
     helpResponse += "  Set the entire pixel strip to a static pattern.\n";
     helpResponse += "  pattern: solid (one color), striped (colors alternate), gradient (interpolated).\n";
     helpResponse += "  color: hex color(s), 3 or 6 digits, case insensitive. Repeat for multiple.\n";
-    helpResponse += "  brightness: optional, 0-255 (default 255).\n\n";
+    helpResponse += "  brightness: optional, 0-255. When given, sets the global brightness\n";
+    helpResponse += "              (persisted, applies to all effects). Omit to keep the\n";
+    helpResponse += "              current global brightness.\n\n";
     helpResponse += "GET /help\n";
     helpResponse += "  This help page.\n\n";
     helpResponse += "All responses are plain text except /api/info and /api/ledcount (JSON).\n";
@@ -1516,6 +1580,10 @@ void setup() {
   if (numLeds < 1)  numLeds = 1;
   if (numLeds > MAX_LEDS) numLeds = MAX_LEDS;
   strip.updateLength(numLeds);   // apply the stored length
+
+  // Global brightness (0-255), persisted in NVS
+  int storedBrightness = prefs.getInt("brightness", 255);
+  setGlobalBrightness((uint8_t)constrain(storedBrightness, 0, 255));
 
   // Fireflies
   for (int i=0; i<MAX_FIREFLIES; i++) fireflies[i].active=false;

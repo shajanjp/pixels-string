@@ -133,6 +133,14 @@ Turn LEDs on or off.
 GET /api/power?state=off
 ```
 
+### `GET /api/brightness?value=<0-255>`
+
+Set the global LED brightness. Applied to every effect and pattern, and saved to NVS so it persists across reboots. `0` turns the LEDs off, `255` is maximum. Read the current value from `/api/info`.
+
+```
+GET /api/brightness?value=128
+```
+
 ### `GET /api/info`
 
 Returns a JSON object with the current state.
@@ -145,7 +153,8 @@ Returns a JSON object with the current state.
   "variationMax": 4,
   "power": "on",
   "numEffects": 15,
-  "ledCount": 50
+  "ledCount": 50,
+  "brightness": 255
 }
 ```
 
@@ -179,7 +188,7 @@ Set pixel colors with customizable patterns. All parameters are passed as query 
 |-----------|----------|-------------|
 | `pattern` | **Yes** | Lighting pattern: `solid`, `striped`, or `gradient`. |
 | `color` | **Yes*** | Hex color code(s) without `#`. Can be repeated for multiple colors. |
-| `brightness` | No | Global brightness `0–255` (default: `255`). Applied after pattern generation. |
+| `brightness` | No | Sets the global brightness `0-255`. Persisted and applied to all effects (including this pattern). Omit to keep the current global brightness. |
 
 *At least one `color` is always required.
 
