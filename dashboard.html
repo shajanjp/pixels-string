@@ -50,6 +50,32 @@
         .power-toggle.is-loading { opacity: 0.6; cursor: wait; }
         .power-toggle.is-error .power-icon { stroke: #ef4444; }
 
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .config-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .config-button:hover { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+        .config-button:active { transform: scale(0.95); }
+        .config-button:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }
+        .config-button .config-icon {
+            width: 22px; height: 22px; fill: none;
+            stroke: #a78bfa; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round;
+        }
+
         .brightness-control {
             display: flex;
             flex-direction: column;
@@ -92,20 +118,9 @@
             flex-direction: column;
             gap: 0.5rem;
         }
-        .settings-divider {
-            flex-shrink: 0;
-            width: 1px;
-            height: 40px;
-            background: rgba(255,255,255,0.08);
-        }
 
-        .led-count-row {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .led-count-row input[type="number"] {
-            flex: 1;
-            min-width: 0;
+        .config-modal input[type="number"] {
+            width: 100%;
             padding: 0.5rem 0.6rem;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.08);
@@ -113,7 +128,7 @@
             color: #e5e5ec;
             font-size: 0.9rem;
         }
-        .led-count-row input[type="number"].is-invalid {
+        .config-modal input[type="number"].is-invalid {
             border-color: rgba(239,68,68,0.6);
         }
         .led-count-error {
@@ -122,26 +137,10 @@
             margin-top: -0.25rem;
         }
         .led-count-error[hidden] { display: none; }
-        .led-count-row input[type="number"]:focus-visible {
+        .config-modal input[type="number"]:focus-visible {
             outline: 2px solid #06b6d4;
             outline-offset: 2px;
         }
-        .led-count-update {
-            flex-shrink: 0;
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            border: none;
-            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
-            color: #fff;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s ease, transform 0.15s ease;
-        }
-        .led-count-update:hover { transform: translateY(-1px); }
-        .led-count-update:active { transform: scale(0.96); }
-        .led-count-update.is-loading { opacity: 0.6; cursor: wait; }
-        .led-count-update.is-error { background: #ef4444; }
 
         .controls {
             display: flex;
@@ -154,7 +153,6 @@
         @media (max-width: 600px) {
             .controls { gap: 0.75rem; }
             .settings-panel { flex-direction: column; align-items: stretch; max-width: 280px; }
-            .settings-divider { width: 100%; height: 1px; }
             body { padding: 1rem; }
             .effect-btn { width: 160px; }
             .dots { gap: 6px; }
@@ -248,6 +246,69 @@
             stroke-linecap: round; stroke-linejoin: round;
         }
 
+        .cal-status {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 0.4rem;
+        }
+        .cal-question {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            color: #e5e5ec;
+            margin-bottom: 1.1rem;
+        }
+        .cal-options {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .cal-option {
+            flex: 1;
+            padding: 0.9rem 0.5rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.14);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        }
+        .cal-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+            filter: brightness(1.1);
+        }
+        .cal-option:active { transform: scale(0.96); }
+        .cal-option:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }
+        .cal-option-red   { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+        .cal-option-green { background: linear-gradient(135deg, #15803d, #22c55e); }
+        .cal-option-blue  { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+        .cal-result {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.9rem 1rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.85rem;
+            color: #e5e5ec;
+        }
+        .cal-result[hidden] { display: none; }
+        .cal-result-order {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: #c4b5fd;
+        }
+        @media (max-width: 600px) {
+            .cal-options { flex-direction: column; }
+        }
+
         .modal-overlay {
             position: fixed; inset: 0; z-index: 1000;
             display: flex; align-items: center; justify-content: center;
@@ -334,29 +395,87 @@
         .btn-primary.is-loading { opacity: 0.6; cursor: wait; }
         .btn-primary.is-error { background: #ef4444; }
 
+        .color-order-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+        .color-order-btn {
+            flex: 1 1 calc(33% - 0.4rem);
+            min-width: 70px;
+            padding: 0.55rem 0.5rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+        }
+        .color-order-btn:hover { border-color: rgba(167,139,250,0.4); color: #c4b5fd; }
+        .color-order-btn.active {
+            background: rgba(167,139,250,0.22);
+            border-color: rgba(167,139,250,0.5);
+            color: #c4b5fd;
+        }
+        .color-order-btn:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }
+        .form-hint {
+            margin-top: 0.5rem;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .calibrate-entry {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 12px;
+            border: 1px dashed rgba(167,139,250,0.45);
+            background: rgba(167,139,250,0.08);
+            color: #c4b5fd;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .calibrate-entry:hover {
+            background: rgba(167,139,250,0.16);
+            border-color: rgba(167,139,250,0.65);
+            transform: translateY(-1px);
+        }
+        .calibrate-entry:active { transform: scale(0.98); }
+        .calibrate-entry:focus-visible { outline: 2px solid #06b6d4; outline-offset: 2px; }
+        .calibrate-entry-icon {
+            width: 18px; height: 18px; fill: none;
+            stroke: currentColor; stroke-width: 2;
+            stroke-linecap: round; stroke-linejoin: round;
+        }
+
         footer { margin-top: auto; padding-top: 1rem; color: rgba(255,255,255,0.35); font-size: 0.75rem; }
     </style>
 </head>
 <body>
     <h1>Pixels String</h1>
-    <div class="power-toggle on" role="button" tabindex="0" aria-label="Toggle power" id="powerToggle">
-        <svg class="power-icon" viewBox="0 0 24 24"><path d="M12 2v8"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
+    <div class="top-actions">
+        <div class="power-toggle on" role="button" tabindex="0" aria-label="Toggle power" id="powerToggle">
+            <svg class="power-icon" viewBox="0 0 24 24"><path d="M12 2v8"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
+        </div>
+        <div class="config-button" role="button" tabindex="0" aria-label="Open configuration" id="configButton">
+            <svg class="config-icon" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </div>
     </div>
 
     <div class="settings-panel">
-        <div class="settings-section">
-            <div class="brightness-control-header">
-                <label for="ledCountInput">Number of LEDs</label>
-            </div>
-            <div class="led-count-row">
-                <input type="number" id="ledCountInput" min="1" max="300" value="1" aria-label="Number of LEDs">
-                <button class="led-count-update" id="ledCountUpdate" type="button">Update</button>
-            </div>
-            <div class="led-count-error" id="ledCountError" hidden>Enter a value between 1 and 300</div>
-        </div>
-
-        <div class="settings-divider"></div>
-
         <div class="settings-section">
             <div class="brightness-control-header">
                 <label for="globalBrightnessSlider">Brightness</label>
@@ -403,6 +522,54 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="modalCancel">Cancel</button>
                 <button class="btn btn-primary" id="modalApply">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="configModal">
+        <div class="modal config-modal" role="dialog" aria-labelledby="configTitle" aria-modal="true">
+            <div class="modal-header">
+                <h2 id="configTitle">Configuration</h2>
+                <button class="modal-close" id="configClose" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="configFormView">
+                    <div class="form-group">
+                        <label for="configLedCountInput">Number of LEDs</label>
+                        <input type="number" id="configLedCountInput" min="1" max="300" aria-label="Number of LEDs">
+                        <div class="led-count-error" id="configLedCountError" hidden>Enter a value between 1 and 300</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Color Order</label>
+                        <div class="color-order-options" id="colorOrderOptions">
+                            <button class="color-order-btn" data-order="RGB" type="button">RGB</button>
+                            <button class="color-order-btn" data-order="RBG" type="button">RBG</button>
+                            <button class="color-order-btn" data-order="GRB" type="button">GRB</button>
+                            <button class="color-order-btn" data-order="GBR" type="button">GBR</button>
+                            <button class="color-order-btn" data-order="BRG" type="button">BRG</button>
+                            <button class="color-order-btn" data-order="BGR" type="button">BGR</button>
+                        </div>
+                        <div class="form-hint">Most WS2812B strips are GRB. If colors still look wrong after setting this, run the calibration below.</div>
+                    </div>
+                    <button class="calibrate-entry" id="calibrateEntry" type="button">
+                        <svg class="calibrate-entry-icon" viewBox="0 0 24 24"><path d="M12 3l4 5a6 6 0 1 1-8 0l4-5z"/></svg>
+                        Calibrate Color Order
+                    </button>
+                </div>
+                <div id="calibrationView" hidden>
+                    <div class="cal-status" id="calStatus">Calibrating</div>
+                    <div class="cal-question" id="calQuestion"></div>
+                    <div class="cal-options" id="calOptions">
+                        <button class="cal-option cal-option-red" data-color="R" type="button">Red</button>
+                        <button class="cal-option cal-option-green" data-color="G" type="button">Green</button>
+                        <button class="cal-option cal-option-blue" data-color="B" type="button">Blue</button>
+                    </div>
+                    <div class="cal-result" id="calResult" hidden></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="configCancel">Cancel</button>
+                <button class="btn btn-primary" id="configApply">Apply</button>
             </div>
         </div>
     </div>
@@ -903,6 +1070,114 @@
             }
         });
 
+        // ==============================================================
+        //  COLOR ORDER CALIBRATION
+        //  Lights the strip solid red, asks which color the user sees, then
+        //  lights it solid green and asks again. The two answers reveal the
+        //  physical channel order, which is saved via /config?colorOrder=.
+        // ==============================================================
+        const calStatus = document.getElementById('calStatus');
+        const calQuestion = document.getElementById('calQuestion');
+        const calOptions = document.getElementById('calOptions');
+        const calResult = document.getElementById('calResult');
+        const calOptionButtons = document.querySelectorAll('.cal-option');
+
+        let calStep = null;          // 'ask-red' | 'ask-green' | 'done'
+        let calRedSeen = null;       // user's answer to the red test
+        let calAssumedOrder = 'RGB'; // current order reported by the device
+
+        async function setCalColor(hex) {
+            const res = await fetch(`/api/pixels/set?pattern=solid&color=${hex}`);
+            if (!res.ok) throw new Error('set color failed');
+        }
+
+        function renderCalQuestion(step) {
+            calResult.hidden = true;
+            calOptions.hidden = false;
+            if (step === 'ask-red') {
+                calStatus.textContent = 'Step 1 of 2';
+                calQuestion.textContent = 'The strip is now lit RED. Which color do you actually see on the strip?';
+            } else {
+                calStatus.textContent = 'Step 2 of 2';
+                calQuestion.textContent = 'The strip is now lit GREEN. Which color do you actually see on the strip?';
+            }
+        }
+
+        function renderCalError(msg) {
+            calStatus.textContent = 'Calibration failed';
+            calQuestion.textContent = msg;
+            calOptions.hidden = true;
+        }
+
+        // Given the color seen for the red test and the green test, derive the
+        // physical channel order. 'assumed' is the order the firmware currently
+        // uses, which decides where the red/green components are routed.
+        function computeColorOrder(seenRed, seenGreen, assumed) {
+            if (!['R','G','B'].includes(seenRed) || !['R','G','B'].includes(seenGreen)) return null;
+            const posR = assumed.indexOf('R');
+            const posG = assumed.indexOf('G');
+            const posB = assumed.indexOf('B');
+            const order = ['?', '?', '?'];
+            order[posR] = seenRed;
+            order[posG] = seenGreen;
+            const remaining = ['R', 'G', 'B'].find(c => c !== seenRed && c !== seenGreen);
+            if (remaining) order[posB] = remaining;
+            const result = order.join('');
+            return result.length === 3 && new Set(result).size === 3 ? result : null;
+        }
+
+        async function startCalibration() {
+            if (calStep === 'ask-red' || calStep === 'ask-green') return;
+            calStep = 'ask-red';
+            calRedSeen = null;
+            calResult.hidden = true;
+            renderCalQuestion('ask-red');
+            try {
+                const infoRes = await fetch('/api/info');
+                if (infoRes.ok) {
+                    const info = await infoRes.json();
+                    if (info.colorOrder) calAssumedOrder = info.colorOrder;
+                }
+                await setCalColor('ff0000');
+            } catch (e) {
+                calStep = null;
+                renderCalError('Could not light the strip red. Check the connection and try again.');
+            }
+        }
+
+        calOptionButtons.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (calStep !== 'ask-red' && calStep !== 'ask-green') return;
+                const seen = btn.dataset.color;
+                try {
+                    if (calStep === 'ask-red') {
+                        calRedSeen = seen;
+                        calStep = 'ask-green';
+                        renderCalQuestion('ask-green');
+                        await setCalColor('00ff00');
+                    } else {
+                        const order = computeColorOrder(calRedSeen, seen, calAssumedOrder);
+                        calStep = 'done';
+                        calOptions.hidden = true;
+                        if (!order) {
+                            renderCalError('The two answers did not produce a valid color order. Please try again.');
+                            return;
+                        }
+                        const res = await fetch(`/config?colorOrder=${order}`);
+                        if (!res.ok) throw new Error('config failed');
+                        selectColorOrder(order); // sync the color order buttons
+                        calStatus.textContent = 'Calibration complete';
+                        calQuestion.textContent = 'Color order detected and saved to the device.';
+                        calResult.hidden = false;
+                        calResult.innerHTML = `Detected color order: <span class="cal-result-order">${order}</span>`;
+                    }
+                } catch (e) {
+                    calStep = null;
+                    renderCalError('Something went wrong while calibrating. Please try again.');
+                }
+            });
+        });
+
         const powerToggle = document.getElementById('powerToggle');
         async function fetchPowerState() {
             try {
@@ -912,10 +1187,6 @@
                     const on = data.power === 'on';
                     powerToggle.classList.toggle('on', on);
                     powerToggle.classList.toggle('off', !on);
-                    if (typeof data.ledCount === 'number') {
-                        ledCountInput.value = String(data.ledCount);
-                        setLedCountError(false);
-                    }
                     if (typeof data.brightness === 'number') {
                         const pct = Math.round(data.brightness * 100 / 255);
                         globalBrightnessSlider.value = String(pct);
@@ -976,57 +1247,156 @@
         });
 
         // ==============================================================
-        //  LED COUNT CONTROL
+        //  CONFIG MODAL (ledCount + colorOrder + calibration)
         // ==============================================================
+        const configButton = document.getElementById('configButton');
+        const configModal = document.getElementById('configModal');
+        const configClose = document.getElementById('configClose');
+        const configCancel = document.getElementById('configCancel');
+        const configApply = document.getElementById('configApply');
+        const configLedCountInput = document.getElementById('configLedCountInput');
+        const configLedCountError = document.getElementById('configLedCountError');
+        const colorOrderOptions = document.getElementById('colorOrderOptions');
+        const colorOrderButtons = colorOrderOptions.querySelectorAll('.color-order-btn');
+        const configTitle = document.getElementById('configTitle');
+        const configFormView = document.getElementById('configFormView');
+        const calibrationView = document.getElementById('calibrationView');
+        const calibrateEntry = document.getElementById('calibrateEntry');
+
         const LED_COUNT_MIN = 1;
         const LED_COUNT_MAX = 300;
-        const ledCountInput = document.getElementById('ledCountInput');
-        const ledCountUpdate = document.getElementById('ledCountUpdate');
-        const ledCountError = document.getElementById('ledCountError');
 
-        function setLedCountError(show) {
-            ledCountError.hidden = !show;
-            ledCountInput.classList.toggle('is-invalid', show);
+        let selectedColorOrder = 'RGB';
+
+        function openConfigModal() { configModal.classList.add('active'); }
+        function closeConfigModal() { configModal.classList.remove('active'); }
+
+        function showConfigView() {
+            configFormView.hidden = false;
+            calibrationView.hidden = true;
+            configApply.hidden = false;
+            configCancel.textContent = 'Cancel';
+            configTitle.textContent = 'Configuration';
         }
 
-        function ledCountValid() {
-            const count = parseInt(ledCountInput.value, 10);
-            return !isNaN(count) && count >= LED_COUNT_MIN && count <= LED_COUNT_MAX;
+        function showCalibrationView() {
+            configFormView.hidden = true;
+            calibrationView.hidden = false;
+            configApply.hidden = true;
+            configCancel.textContent = 'Back';
+            configTitle.textContent = 'Color Calibration';
         }
 
-        async function sendLedCount(count) {
-            ledCountUpdate.classList.add('is-loading');
+        function selectColorOrder(order) {
+            if (!order) return;
+            selectedColorOrder = order;
+            colorOrderButtons.forEach(b => {
+                const active = b.dataset.order === order;
+                b.classList.toggle('active', active);
+                b.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+        }
+
+        async function loadConfig() {
+            configApply.classList.remove('is-error');
             try {
-                const res = await fetch(`/api/ledcount?count=${count}`);
-                if (!res.ok) ledCountUpdate.classList.add('is-error');
-            } catch (e) {
-                ledCountUpdate.classList.add('is-error');
-                console.error('set led count failed', e);
-            } finally {
-                ledCountUpdate.classList.remove('is-loading');
-                setTimeout(() => ledCountUpdate.classList.remove('is-error'), 1000);
-            }
+                const res = await fetch('/config');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (typeof data.ledCount === 'number') configLedCountInput.value = String(data.ledCount);
+                    if (data.colorOrder) selectColorOrder(data.colorOrder);
+                }
+            } catch (e) { console.error('load config failed', e); }
         }
 
-        ledCountUpdate.addEventListener('click', () => {
-            if (ledCountUpdate.classList.contains('is-loading')) return;
-            if (!ledCountValid()) {
-                setLedCountError(true);
-                ledCountInput.focus();
-                ledCountUpdate.classList.add('is-error');
-                setTimeout(() => ledCountUpdate.classList.remove('is-error'), 1500);
+        colorOrderButtons.forEach(btn => {
+            btn.addEventListener('click', () => selectColorOrder(btn.dataset.order));
+        });
+
+        calibrateEntry.addEventListener('click', () => {
+            showCalibrationView();
+            startCalibration();
+        });
+
+        configButton.addEventListener('click', () => {
+            calStep = null;
+            configLedCountError.hidden = true;
+            configLedCountInput.classList.remove('is-invalid');
+            showConfigView();
+            openConfigModal();
+            loadConfig();
+        });
+        configButton.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); configButton.click(); }
+        });
+        configClose.addEventListener('click', () => {
+            calStep = null;
+            showConfigView();
+            closeConfigModal();
+        });
+        configCancel.addEventListener('click', () => {
+            if (configFormView.hidden) {          // currently in calibration view
+                calStep = null;
+                showConfigView();
+            } else {
+                closeConfigModal();
+            }
+        });
+        configModal.addEventListener('click', (e) => {
+            if (e.target === configModal) {
+                calStep = null;
+                showConfigView();
+                closeConfigModal();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && configModal.classList.contains('active')) {
+                calStep = null;
+                showConfigView();
+                closeConfigModal();
+            }
+        });
+
+        configLedCountInput.addEventListener('input', () => {
+            const count = parseInt(configLedCountInput.value, 10);
+            if (!isNaN(count) && count >= LED_COUNT_MIN && count <= LED_COUNT_MAX) {
+                configLedCountError.hidden = true;
+                configLedCountInput.classList.remove('is-invalid');
+            }
+        });
+        configLedCountInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); configApply.click(); }
+        });
+
+        configApply.addEventListener('click', async () => {
+            if (configApply.classList.contains('is-loading')) return;
+            const count = parseInt(configLedCountInput.value, 10);
+            if (isNaN(count) || count < LED_COUNT_MIN || count > LED_COUNT_MAX) {
+                configLedCountError.hidden = false;
+                configLedCountInput.classList.add('is-invalid');
+                configLedCountInput.focus();
+                configApply.classList.add('is-error');
+                setTimeout(() => configApply.classList.remove('is-error'), 1500);
                 return;
             }
-            setLedCountError(false);
-            sendLedCount(parseInt(ledCountInput.value, 10));
-        });
-
-        ledCountInput.addEventListener('input', () => {
-            if (ledCountValid()) setLedCountError(false);
-        });
-
-        ledCountInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); ledCountUpdate.click(); }
+            configLedCountError.hidden = true;
+            configLedCountInput.classList.remove('is-invalid');
+            configApply.classList.add('is-loading');
+            try {
+                const res = await fetch(`/config?ledCount=${count}&colorOrder=${selectedColorOrder}`);
+                if (res.ok) {
+                    configApply.classList.remove('is-loading');
+                    fetchPowerState(); // keep power/brightness in sync
+                    setTimeout(closeConfigModal, 300);
+                } else {
+                    configApply.classList.add('is-error');
+                }
+            } catch (e) {
+                configApply.classList.add('is-error');
+                console.error('apply config failed', e);
+            } finally {
+                setTimeout(() => configApply.classList.remove('is-error'), 1500);
+            }
         });
 
         fetchPowerState();

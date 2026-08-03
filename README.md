@@ -154,24 +154,53 @@ Returns a JSON object with the current state.
   "power": "on",
   "numEffects": 15,
   "ledCount": 50,
-  "brightness": 255
+  "brightness": 255,
+  "colorOrder": "GRB"
 }
 ```
 
-### `GET /api/ledcount?count=<1-300>`
+### `GET /config`
 
-Set the number of LEDs. This is saved to NVS and persists across reboots.
-
-```
-GET /api/ledcount?count=100
-```
-
-### `GET /api/ledcount`
-
-Returns the current LED count as JSON.
+Returns the current device configuration as JSON: color order, LED count, brightness, active effect, and power state.
 
 ```json
-{ "ledCount": 100 }
+{
+  "colorOrder": "GRB",
+  "colorOrderValue": 1,
+  "ledCount": 50,
+  "brightness": 255,
+  "effect": "AURORA",
+  "power": "on"
+}
+```
+
+### `GET /config?colorOrder=<RGB|RBG|GRB|GBR|BRG|BGR>`
+
+Set the NeoPixel color order dynamically. This matches the physical wiring of the strip: some strips are RGB, others are GRB, BRG, BGR, etc. Accepts the color order by name (case-insensitive) or by its numeric `NEO_*` value (`0-5`, e.g. `5` = BGR). Applies immediately to all effects and patterns, is saved to NVS, and persists across reboots.
+
+```
+GET /config?colorOrder=BGR
+```
+
+### `GET /config?ledCount=<1-300>`
+
+Set the number of LEDs. Applies immediately, is saved to NVS, and persists across reboots.
+
+```
+GET /config?ledCount=100
+```
+
+Both parameters can be combined in a single request, e.g. `GET /config?colorOrder=GRB&ledCount=120`. Any request to `/config` (with or without parameters) returns the full current configuration as JSON, so the response serves as confirmation:
+
+```json
+{
+  "colorOrder": "GRB",
+  "colorOrderValue": 1,
+  "ledCount": 120,
+  "brightness": 255,
+  "effect": "AURORA",
+  "power": "on"
+}
 ```
 
 ### `GET /help`
@@ -243,11 +272,17 @@ pixels-string/
 ├── pixels-string.ino      # Main Arduino sketch (effects, WiFi, HTTP, button)
 ├── config.example.h       # WiFi & network config template
 ├── config.h               # Your actual config (gitignored)
-├── index.html             # Web dashboard source (HTML/CSS/JS)
+├── dashboard.html         # Web dashboard source (HTML/CSS/JS)
 ├── dashboard_html.h       # Auto-generated: minified HTML embedded as a C string
 ├── html-to-header.js      # Node.js script to minify HTML & generate header
 ├── package.json           # Node dependencies (html-minifier)
-└── pixels-string-dashboard-screenshot.jpg
+├── pixels-string-dashboard-screenshot.jpg
+└── site/                  # Project website
+    ├── index.html         # Landing page
+    ├── favicon.png        # Browser icon
+    ├── apple-touch-icon.png # iOS home screen icon
+    ├── og-image.png       # Social sharing image
+    └── site.webmanifest   # Web app manifest
 ```
 
 ## Maximum LEDs

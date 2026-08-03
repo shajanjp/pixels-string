@@ -40,6 +40,7 @@ const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1};
 
 bool powerOn = true;
 uint8_t globalBrightness = 255;   // 0-255, applied globally via strip.setBrightness()
+neoPixelType pixelOrder = NEO_RGB; // current color order, persisted in NVS
 
 // ===========================  BUTTON STATE ===========================
 bool buttonState = HIGH;
@@ -87,6 +88,44 @@ String getParam(const String& url, const String& param) {
 void setGlobalBrightness(uint8_t b) {
   globalBrightness = constrain(b, 0, 255);
   strip.setBrightness(globalBrightness == 0 ? 1 : globalBrightness);
+}
+
+// Human-readable name for a NEO_* color order constant.
+String colorOrderName(neoPixelType t) {
+  switch (t) {
+    case NEO_RGB: return "RGB";
+    case NEO_RBG: return "RBG";
+    case NEO_GRB: return "GRB";
+    case NEO_GBR: return "GBR";
+    case NEO_BRG: return "BRG";
+    case NEO_BGR: return "BGR";
+    default: return "RGB";
+  }
+}
+
+// Parse a color order from its name (case-insensitive, e.g. "GRB").
+// Returns false for unknown names.
+bool parseColorOrder(const String& name, neoPixelType& out) {
+  const neoPixelType orders[6] = {NEO_RGB, NEO_RBG, NEO_GRB,
+                                  NEO_GBR, NEO_BRG, NEO_BGR};
+  for (int i = 0; i < 6; i++) {
+    if (name.equalsIgnoreCase(colorOrderName(orders[i]))) {
+      out = orders[i];
+      return true;
+    }
+  }
+  return false;
+}
+
+// Apply a color order to the strip and persist it in NVS.
+// Takes effect immediately on the next show(): setPixelColor() routes each
+// logical RGB value through the order's channel offsets. Existing static
+// patterns need no conversion because the packed buffer is always logical RGB.
+void setColorOrder(neoPixelType t) {
+  if (t == pixelOrder) return;
+  pixelOrder = t;
+  strip.updateType(t + NEO_KHZ800);
+  prefs.putInt("colorOrder", (int)t);
 }
 
 String effectName(Effect e) {
@@ -319,33 +358,76 @@ void handleClient() {
     response += "\"power\":\"" + String(powerOn?"on":"off") + "\",";
     response += "\"numEffects\":" + String(NUM_EFFECTS) + ",";
     response += "\"ledCount\":" + String(numLeds) + ",";
-    response += "\"brightness\":" + String(globalBrightness);
+    response += "\"brightness\":" + String(globalBrightness) + ",";
+    response += "\"colorOrder\":\"" + colorOrderName(pixelOrder) + "\"";
     response += "}";
   }
-  else if (path == "/api/ledcount") {
-    String countStr = getParam(fullPath, "count");
+  else if (path == "/config") {
+    // GET /config?colorOrder=GRB&ledCount=120 -> set + persist config values
+    // GET /config                              -> return current config as JSON
+    String countStr = getParam(fullPath, "ledCount");
     if (countStr.length() > 0) {
+      bool isNumeric = true;
+      for (int i = 0; i < countStr.length(); i++)
+        if (!isdigit(countStr.charAt(i))) { isNumeric = false; break; }
       int newCount = countStr.toInt();
-      if (newCount >= 1 && newCount <= MAX_LEDS) {
-        numLeds = newCount;
-        prefs.putInt("ledCount", numLeds);
-        strip.updateLength(numLeds);
-        resetEffectState();          // re‑init all effect variables
-        response += "LED count set to " + String(numLeds) + "\n";
-      } else {
-        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n"
+      if (!isNumeric || newCount < 1 || newCount > MAX_LEDS) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
                    "Connection: close\r\n\r\n"
-                   "Invalid count. Must be 1-" + String(MAX_LEDS);
+                   "{\"status\":\"error\",\"message\":\"Invalid ledCount. Must be 1-" +
+                   String(MAX_LEDS) + "}";
         client.print(response);
         client.stop();
         return;
       }
-    } else {
-      // return current value as JSON
-      response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
-                 "Connection: close\r\n\r\n"
-                 "{\"ledCount\":" + String(numLeds) + "}";
+      if (newCount != numLeds) {
+        numLeds = newCount;
+        prefs.putInt("ledCount", numLeds);
+        strip.updateLength(numLeds);
+        resetEffectState();          // re-init all effect variables
+      }
     }
+
+    String orderStr = getParam(fullPath, "colorOrder");
+    if (orderStr.length() > 0) {
+      neoPixelType order;
+      bool valid = false;
+      bool isNumeric = true;
+      for (int i = 0; i < orderStr.length(); i++)
+        if (!isdigit(orderStr.charAt(i))) { isNumeric = false; break; }
+      if (isNumeric) {
+        int v = orderStr.toInt();
+        if (v == NEO_RGB || v == NEO_RBG || v == NEO_GRB || v == NEO_GBR ||
+            v == NEO_BRG || v == NEO_BGR) {
+          order = (neoPixelType)v;
+          valid = true;
+        }
+      } else {
+        valid = parseColorOrder(orderStr, order);
+      }
+      if (!valid) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                   "Connection: close\r\n\r\n"
+                   "{\"status\":\"error\",\"message\":\"Invalid colorOrder. "
+                   "Valid: RGB, RBG, GRB, GBR, BRG, BGR (or 0-5)\"}";
+        client.print(response);
+        client.stop();
+        return;
+      }
+      setColorOrder(order);
+    }
+
+    // Both params (or neither) applied; return the full current config.
+    response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
+               "Connection: close\r\n\r\n";
+    response += "{";
+    response += "\"colorOrder\":\"" + colorOrderName(pixelOrder) + "\",";
+    response += "\"colorOrderValue\":" + String((int)pixelOrder) + ",";
+    response += "\"ledCount\":" + String(numLeds) + ",";
+    response += "\"brightness\":" + String(globalBrightness) + ",";
+    response += "\"effect\":\"" + effectName(currentEffect) + "\",";
+    response += "\"power\":\"" + String(powerOn ? "on" : "off") + "\"";
+    response += "}";
   }
   else if (path == "/api/pixels/set") {
     String pattern = getParam(fullPath, "pattern");
@@ -499,10 +581,15 @@ void handleClient() {
     helpResponse += "GET /api/info\n";
     helpResponse += "  Returns a JSON object with current effect, variation, power state,\n";
     helpResponse += "  effect count, and led count.\n\n";
-    helpResponse += "GET /api/ledcount?count=<1-300>\n";
+    helpResponse += "GET /config?colorOrder=<RGB|RBG|GRB|GBR|BRG|BGR>\n";
+    helpResponse += "  Set the NeoPixel color order (wiring of the strip).\n";
+    helpResponse += "  Applies immediately and is saved across reboots.\n";
+    helpResponse += "GET /config?ledCount=<1-300>\n";
     helpResponse += "  Set the number of LEDs (1-300).\n";
-    helpResponse += "GET /api/ledcount\n";
-    helpResponse += "  Returns the current number of LEDs as JSON.\n\n";
+    helpResponse += "  Parameters can be combined in one request.\n";
+    helpResponse += "GET /config\n";
+    helpResponse += "  Returns the current configuration as JSON (color order, LED count,\n";
+    helpResponse += "  brightness, effect, power).\n\n";
     helpResponse += "GET /api/pixels/set?pattern=<solid|striped|gradient>&color=RRGGBB[&color=...][&brightness=0-255]\n";
     helpResponse += "  Set the entire pixel strip to a static pattern.\n";
     helpResponse += "  pattern: solid (one color), striped (colors alternate), gradient (interpolated).\n";
@@ -512,7 +599,7 @@ void handleClient() {
     helpResponse += "              current global brightness.\n\n";
     helpResponse += "GET /help\n";
     helpResponse += "  This help page.\n\n";
-    helpResponse += "All responses are plain text except /api/info and /api/ledcount (JSON).\n";
+    helpResponse += "All responses are plain text except /api/info and /config (JSON).\n";
     helpResponse += "The root path (/) redirects to an external control page.\n";
 
     client.print(helpResponse);
@@ -1451,10 +1538,10 @@ void resetEffectState() {
   runner.pos = 0;
   runner.direction = 1;
 
-  // Audio Visualizer – free and recreate next cycle
+  // Audio Visualizer - free and recreate next cycle
   if (bands) { delete[] bands; bands = nullptr; numBands = 0; }
 
-  // Heartbeat – reset all phases
+  // Heartbeat - reset all phases
   hbPhase = PAUSE;
   hbNextTrigger = millis();
   hbPulse1Brightness = 0;
@@ -1584,6 +1671,16 @@ void setup() {
   // Global brightness (0-255), persisted in NVS
   int storedBrightness = prefs.getInt("brightness", 255);
   setGlobalBrightness((uint8_t)constrain(storedBrightness, 0, 255));
+
+  // Color order (RGB/GRB/BGR/...), persisted in NVS. Fixed by the physical
+  // wiring of the strip, so only meaningful when swapping strips.
+  int storedOrder = prefs.getInt("colorOrder", NEO_RGB);
+  if (storedOrder != NEO_RBG && storedOrder != NEO_GRB && storedOrder != NEO_GBR &&
+      storedOrder != NEO_BRG && storedOrder != NEO_BGR) {
+    storedOrder = NEO_RGB;
+  }
+  pixelOrder = (neoPixelType)storedOrder;
+  strip.updateType(pixelOrder + NEO_KHZ800);
 
   // Fireflies
   for (int i=0; i<MAX_FIREFLIES; i++) fireflies[i].active=false;
