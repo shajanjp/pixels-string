@@ -36,12 +36,15 @@ enum Effect {
   BOUNCING_BALLS,
   LIGHTNING_STORM,
   KALEIDOSCOPE,
+  COLLIDING_FILL,
+  PAINT_SPLAT,
+  SNAKE,
   NUM_EFFECTS
 };
 
 Effect currentEffect = FIREFLIES;
 int currentVariation = 0;
-const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,5,5,5,5,5};
+const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,5,5,5,5,5,5,5,5};
 
 bool powerOn = true;
 uint8_t globalBrightness = 255;   // 0-255, applied globally via strip.setBrightness()
@@ -156,6 +159,9 @@ String effectName(Effect e) {
     case BOUNCING_BALLS: return "BOUNCING_BALLS";
     case LIGHTNING_STORM: return "LIGHTNING_STORM";
     case KALEIDOSCOPE: return "KALEIDOSCOPE";
+    case COLLIDING_FILL: return "COLLIDING_FILL";
+    case PAINT_SPLAT: return "PAINT_SPLAT";
+    case SNAKE: return "SNAKE";
     default: return "UNKNOWN";
   }
 }
@@ -578,8 +584,9 @@ void handleClient() {
     helpResponse += "               CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA,\n";
     helpResponse += "               RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER,\n";
     helpResponse += "               AUDIO_VISUALIZER, HEARTBEAT, TWINKLE, FIRE_FLICKER,\n";
-    helpResponse += "               BOUNCING_BALLS, LIGHTNING_STORM, KALEIDOSCOPE\n\n";
-    helpResponse += "GET /api/effect?index=<0-20>\n";
+    helpResponse += "               BOUNCING_BALLS, LIGHTNING_STORM, KALEIDOSCOPE,\n";
+    helpResponse += "               COLLIDING_FILL, PAINT_SPLAT, SNAKE\n\n";
+    helpResponse += "GET /api/effect?index=<0-23>\n";
     helpResponse += "  Set the active effect by its numeric index (0 = FIREFLIES).\n\n";
     helpResponse += "GET /api/variation?index=<0-4>\n";
     helpResponse += "  Set the variation of the current effect (0-based).\n\n";
@@ -1953,6 +1960,618 @@ void updateKaleidoscope() {
   strip.show();
 }
 
+// ----------------------- COLLIDING FILL -----------------------
+// Game-like fill: two coloured pixels race from the outermost empty LEDs,
+// collide in the middle, then park (per variation) until the whole strip is
+// full, then the effect resets. One LED step every 50 ms.
+//   Var 0 Classic Fill    - both return to their starting sides, fill ends inward
+//   Var 1 Colour Swap     - colours exchange at the collision, then return
+//   Var 2 Teleport Fill   - on collision they warp to the next empty edge slots
+//   Var 3 Random Side     - each pixel picks a random side, parks at nearest free spot
+//   Var 4 Center-Out Fill - they stop right at the collision point, block grows outward
+#define CF_STEP_MS       50      // one LED step every 50 ms
+#define CF_FLASH_TICKS   2       // white flash ticks at the collision point
+#define CF_FINAL_TICKS   6       // blink ticks for the final single pixel
+#define CF_FULL_HOLD_MS  2000    // hold the full strip before resetting
+
+enum CFPhase { CF_RUN, CF_COLLIDE, CF_RETURN, CF_FINAL, CF_FULL_HOLD };
+
+struct CollidingFill {
+  bool parked[MAX_LEDS];
+  uint32_t parkedCol[MAX_LEDS];
+  int leftPos, rightPos;          // runner positions (-1 = inactive)
+  int originL, originR;           // spawn (edge) slots of the current pair
+  uint32_t leftCol, rightCol;     // runner colours
+  int targetL, targetR;           // parking targets during CF_RETURN
+  bool targetSetL, targetSetR;
+  bool doneL, doneR;              // return-trip completion per runner
+  CFPhase phase;
+  int flashTicks;
+  int mode;                       // cached variation
+  unsigned long lastStep, fullSince;
+  bool active;
+};
+CollidingFill cf;
+
+int cfLeftmostEmpty() {
+  for (int i = 0; i < numLeds; i++) if (!cf.parked[i]) return i;
+  return -1;
+}
+
+int cfRightmostEmpty() {
+  for (int i = numLeds - 1; i >= 0; i--) if (!cf.parked[i]) return i;
+  return -1;
+}
+
+// First empty LED scanning from pos in the given direction (-1 left, +1 right).
+int cfNearestFree(int pos, int dir) {
+  for (int i = pos + dir; i >= 0 && i < numLeds; i += dir) {
+    if (!cf.parked[i]) return i;
+  }
+  return -1;
+}
+
+void cfPark(int pos, uint32_t col) {
+  if (pos < 0 || pos >= numLeds) return;
+  cf.parked[pos] = true;
+  cf.parkedCol[pos] = col;
+}
+
+void cfSpawnNextPair(bool keepColors) {
+  int L = cfLeftmostEmpty();
+  int R = cfRightmostEmpty();
+  if (L < 0) {                    // strip completely full
+    cf.phase = CF_FULL_HOLD;
+    cf.fullSince = millis();
+    return;
+  }
+  if (L == R) {                   // one LED left: final single-pixel round
+    cf.phase = CF_FINAL;
+    cf.leftPos = L;
+    cf.rightPos = -1;
+    cf.flashTicks = CF_FINAL_TICKS;
+    cf.leftCol = wheel((uint8_t)random(0, 256));
+    return;
+  }
+  cf.originL = L;
+  cf.originR = R;
+  cf.leftPos = L;
+  cf.rightPos = R;
+  if (!keepColors) {              // fresh pair, complementary colours
+    uint8_t hue = (uint8_t)random(0, 256);
+    cf.leftCol = wheel(hue);
+    cf.rightCol = wheel((hue + 128) % 256);
+  }
+  cf.targetSetL = cf.targetSetR = false;
+  cf.doneL = cf.doneR = false;
+  cf.phase = CF_RUN;
+}
+
+void initCollidingFill() {
+  for (int i = 0; i < numLeds; i++) {
+    cf.parked[i] = false;
+    cf.parkedCol[i] = 0;
+  }
+  cf.phase = CF_RUN;
+  cf.flashTicks = 0;
+  cf.mode = constrain(currentVariation, 0, 4);
+  cf.lastStep = millis();
+  cf.fullSince = 0;
+  cf.active = true;
+  cf.leftPos = cf.rightPos = -1;
+  cf.targetSetL = cf.targetSetR = false;
+  cf.doneL = cf.doneR = false;
+  cfSpawnNextPair(false);
+}
+
+// Move one runner toward its parking target; parks it on arrival.
+// Returns true once the runner is parked.
+bool cfMoveToTarget(int &pos, uint32_t &col, int v, bool isLeft) {
+  int &target = isLeft ? cf.targetL : cf.targetR;
+  bool &set   = isLeft ? cf.targetSetL : cf.targetSetR;
+
+  if (!set) {
+    if (v == 3) {                 // random side: nearest free spot either way
+      int dir = random(2) ? 1 : -1;
+      target = cfNearestFree(pos, dir);
+      if (target < 0) target = cfNearestFree(pos, -dir);
+    } else {                      // classic / swap: back to the pixel's own side
+      target = isLeft ? cfLeftmostEmpty() : cfRightmostEmpty();
+    }
+    set = true;
+  }
+  if (target < 0) return false;
+  if (cf.parked[target]) { set = false; return false; }   // spot taken, re-pick
+  if (pos == target) { cfPark(pos, col); return true; }
+
+  int step = (target > pos) ? 1 : -1;
+  if (cf.parked[pos + step]) pos = target;   // hop over parked LEDs (var 3)
+  else pos += step;
+  return false;
+}
+
+void cfStep(int v) {
+  switch (cf.phase) {
+    case CF_RUN: {
+      int nextL = cf.leftPos + 1;
+      int nextR = cf.rightPos - 1;
+      bool blockedL = nextL < numLeds && cf.parked[nextL];
+      bool blockedR = nextR >= 0 && cf.parked[nextR];
+      if (nextL >= nextR || blockedL || blockedR) {
+        cf.phase = CF_COLLIDE;
+        cf.flashTicks = CF_FLASH_TICKS;
+        if (v == 1) {             // colour swap at the moment of collision
+          uint32_t t = cf.leftCol; cf.leftCol = cf.rightCol; cf.rightCol = t;
+        }
+      } else {
+        cf.leftPos = nextL;
+        cf.rightPos = nextR;
+      }
+      break;
+    }
+    case CF_COLLIDE:
+      if (--cf.flashTicks <= 0) {
+        if (v == 2) {             // teleport: park the edge slots, warp inward
+          cfPark(cf.originL, cf.leftCol);
+          cfPark(cf.originR, cf.rightCol);
+          cfSpawnNextPair(true);   // same pair continues from the new edge slots
+        } else if (v == 4) {      // centre-out: stop right where they are
+          cfPark(cf.leftPos, cf.leftCol);
+          cfPark(cf.rightPos, cf.rightCol);
+          cfSpawnNextPair(false);
+        } else {                  // classic / swap / random: return trip
+          cf.phase = CF_RETURN;
+          cf.targetSetL = cf.targetSetR = false;
+          cf.doneL = cf.doneR = false;
+        }
+      }
+      break;
+    case CF_RETURN: {
+      if (!cf.doneL) cf.doneL = cfMoveToTarget(cf.leftPos, cf.leftCol, v, true);
+      if (!cf.doneR) cf.doneR = cfMoveToTarget(cf.rightPos, cf.rightCol, v, false);
+      if (cf.doneL && cf.doneR) {
+        cf.doneL = cf.doneR = false;
+        cfSpawnNextPair(false);
+      }
+      break;
+    }
+    case CF_FINAL:
+      if (--cf.flashTicks <= 0) {
+        cfPark(cf.leftPos, cf.leftCol);
+        cf.phase = CF_FULL_HOLD;
+        cf.fullSince = millis();
+      }
+      break;
+    case CF_FULL_HOLD:
+      if (millis() - cf.fullSince >= CF_FULL_HOLD_MS) initCollidingFill();
+      break;
+  }
+}
+
+void cfRender() {
+  strip.clear();
+  for (int i = 0; i < numLeds; i++) {
+    if (cf.parked[i]) strip.setPixelColor(i, cf.parkedCol[i]);
+  }
+  if (cf.phase == CF_RUN || cf.phase == CF_COLLIDE || cf.phase == CF_RETURN) {
+    if (cf.leftPos >= 0) strip.setPixelColor(cf.leftPos, cf.leftCol);
+    if (cf.rightPos >= 0) strip.setPixelColor(cf.rightPos, cf.rightCol);
+  } else if (cf.phase == CF_FINAL) {
+    if (cf.flashTicks % 2 == 1) strip.setPixelColor(cf.leftPos, cf.leftCol);  // blink
+  }
+  if (cf.phase == CF_COLLIDE) {   // white flash at the impact point
+    int c = (cf.leftPos + cf.rightPos) / 2;
+    for (int i = max(0, c - 1); i <= min(numLeds - 1, c + 1); i++) {
+      strip.setPixelColor(i, strip.Color(255, 255, 255));
+    }
+  }
+  strip.show();
+}
+
+void updateCollidingFill() {
+  int v = constrain(currentVariation, 0, 4);
+  if (!cf.active || v != cf.mode) initCollidingFill();
+
+  unsigned long now = millis();
+  if (now - cf.lastStep >= CF_STEP_MS) {
+    cf.lastStep = now;
+    cfStep(v);
+  }
+  cfRender();
+}
+
+// Set an LED to a colour scaled by a 0..1 factor. Used by the newer effects
+// so their brightness falloff stays consistent with the older inline loops.
+void setPixelScaled(int idx, uint32_t col, float scale) {
+  if (idx < 0 || idx >= numLeds || scale <= 0.0f) return;
+  if (scale > 1.0f) scale = 1.0f;
+  uint8_t r = (uint8_t)(((col >> 16) & 0xFF) * scale);
+  uint8_t g = (uint8_t)(((col >> 8) & 0xFF) * scale);
+  uint8_t b = (uint8_t)((col & 0xFF) * scale);
+  strip.setPixelColor(idx, strip.Color(r, g, b));
+}
+
+// ----------------------- PAINT SPLAT -----------------------
+// Two paint blobs (small clusters of LEDs) start at the outermost empty
+// pixels and move inward every 50 ms. On collision they merge into a single
+// "splat" that expands outward until the strip is full, then the effect
+// resets with a fresh pair of colours.
+//   Var 0 Classic Mix     - blobs blend (average colour), even spread
+//   Var 1 Splash Burst    - fast one-shot wave to the ends, then solid
+//   Var 2 Lava Lamp Splat - organic, pulsating outward bursts (thick paint)
+//   Var 3 Rainbow Splat   - original colours spread as alternating bands
+//   Var 4 Galactic Splat  - dark sky with slowly filling stars, then hue
+#define PS_STEP_MS      50
+#define PS_FILL_HOLD_MS 1500
+#define PS_CLUSTER      3
+
+enum PSPhase { PS_INWARD, PS_COLLIDE, PS_OUTWARD, PS_FILLED };
+
+struct PaintSplat {
+  int leftHead, rightHead;         // inward-moving blob positions
+  uint32_t leftCol, rightCol, mixedCol;
+  PSPhase phase;
+  int flashTicks;
+  int mode;                        // cached variation
+  unsigned long lastStep, filledSince, outwardSince;
+  float outwardProgress;           // 0..1 while the splat spreads
+  uint8_t starBright[MAX_LEDS];    // galactic variation: star fill levels
+  uint8_t starTarget[MAX_LEDS];
+  bool starPhase;
+  bool active;
+};
+PaintSplat ps;
+
+void initPaintSplat() {
+  for (int i = 0; i < numLeds; i++) {
+    ps.starBright[i] = 0;
+    // ~1 in 4 pixels becomes a star with a random peak, rest stay dark
+    ps.starTarget[i] = (random(4) == 0) ? (uint8_t)random(120, 256) : 0;
+  }
+  ps.mode = constrain(currentVariation, 0, 4);
+  ps.phase = PS_INWARD;
+  ps.flashTicks = 0;
+  ps.lastStep = millis();
+  ps.filledSince = 0;
+  ps.outwardSince = 0;
+  ps.outwardProgress = 0;
+  ps.starPhase = true;
+  ps.active = true;
+  ps.leftHead = PS_CLUSTER - 1;
+  ps.rightHead = numLeds - PS_CLUSTER;
+  if (ps.rightHead < ps.leftHead + 1) ps.rightHead = ps.leftHead + 1;  // tiny strips
+  uint8_t hue = (uint8_t)random(0, 256);
+  ps.leftCol = wheel(hue);
+  ps.rightCol = wheel((hue + 128) % 256);
+  ps.mixedCol = lerpColor(ps.leftCol, ps.rightCol, 0.5f);
+}
+
+void psStep(int v) {
+  switch (ps.phase) {
+    case PS_INWARD:
+      if (ps.leftHead + 1 >= ps.rightHead) {
+        ps.phase = PS_COLLIDE;
+        ps.flashTicks = 3;
+      } else {
+        ps.leftHead++;
+        ps.rightHead--;
+      }
+      break;
+    case PS_COLLIDE:
+      if (--ps.flashTicks <= 0) {
+        ps.phase = PS_OUTWARD;
+        ps.outwardProgress = 0;
+        ps.outwardSince = millis();
+      }
+      break;
+    case PS_OUTWARD:
+      if (v == 1) {
+        ps.outwardProgress += 0.08f;                     // fast one-shot wave
+      } else if (v == 2) {
+        // organic advance: each tick only ~80% chance the paint creeps on
+        if (random(100) < 80) ps.outwardProgress += 1.0f / (numLeds / 2.0f);
+      } else if (v == 4) {
+        if (ps.starPhase) {
+          if (millis() - ps.outwardSince > 2200) ps.starPhase = false;
+        } else {
+          ps.outwardProgress += 0.06f;                   // hue sweep after stars
+        }
+      } else {
+        ps.outwardProgress += 0.03f;                     // classic / rainbow
+      }
+      if (ps.outwardProgress >= 1.0f) {
+        ps.outwardProgress = 1.0f;
+        ps.phase = PS_FILLED;
+        ps.filledSince = millis();
+      }
+      break;
+    case PS_FILLED:
+      if (millis() - ps.filledSince >= PS_FILL_HOLD_MS) initPaintSplat();
+      break;
+  }
+}
+
+void psRender() {
+  strip.clear();
+  int c = numLeds / 2;
+
+  if (ps.phase == PS_INWARD || ps.phase == PS_COLLIDE) {
+    // left blob: cluster tapers toward the tail, plus a faint trail
+    for (int t = 0; t < PS_CLUSTER; t++) {
+      int idx = ps.leftHead - (PS_CLUSTER - 1 - t);
+      float b = (PS_CLUSTER == 1) ? 1.0f : 0.55f + 0.45f * (float)t / (PS_CLUSTER - 1);
+      setPixelScaled(idx, ps.leftCol, b);
+    }
+    for (int t = 1; t <= 3; t++) {
+      setPixelScaled(ps.leftHead - PS_CLUSTER - t + 1, ps.leftCol, 0.16f - t * 0.04f);
+    }
+    // right blob, mirrored
+    for (int t = 0; t < PS_CLUSTER; t++) {
+      int idx = ps.rightHead + (PS_CLUSTER - 1 - t);
+      float b = (PS_CLUSTER == 1) ? 1.0f : 0.55f + 0.45f * (float)t / (PS_CLUSTER - 1);
+      setPixelScaled(idx, ps.rightCol, b);
+    }
+    for (int t = 1; t <= 3; t++) {
+      setPixelScaled(ps.rightHead + PS_CLUSTER - 1 + t, ps.rightCol, 0.16f - t * 0.04f);
+    }
+    if (ps.phase == PS_COLLIDE) {       // white flash at the impact point
+      for (int i = max(0, c - 1); i <= min(numLeds - 1, c + 1); i++) {
+        strip.setPixelColor(i, strip.Color(255, 255, 255));
+      }
+    }
+  }
+  else if (ps.phase == PS_OUTWARD) {
+    if (ps.mode == 2) {
+      // lava lamp: travelling brightness ripples inside the growing blob
+      int span = (int)(ps.outwardProgress * (numLeds / 2.0f));
+      int l0 = max(0, c - span), r1 = min(numLeds - 1, c + span);
+      for (int i = l0; i <= r1; i++) {
+        float ripple = 0.5f + 0.5f * sin(i * 0.7f - millis() * 0.012f);
+        setPixelScaled(i, ps.mixedCol, 0.45f + 0.55f * ripple);
+      }
+      setPixelScaled(l0, ps.mixedCol, 1.0f);   // wet-paint edges glow brightest
+      setPixelScaled(r1, ps.mixedCol, 1.0f);
+    } else if (ps.mode == 4) {
+      if (ps.starPhase) {   // dark background, stars slowly fill in
+        for (int i = 0; i < numLeds; i++) {
+          if (ps.starTarget[i] == 0) continue;
+          if (ps.starBright[i] < ps.starTarget[i]) {
+            ps.starBright[i] = (uint8_t)min((int)ps.starTarget[i], (int)(ps.starBright[i] + 1 + random(0, 3)));
+          }
+          uint8_t b = (random(400) == 0) ? ps.starTarget[i] : ps.starBright[i];  // twinkle
+          strip.setPixelColor(i, strip.Color(b, (uint8_t)(b * 0.9f), (uint8_t)(b * 0.7f)));
+        }
+      } else {              // hue sweep fills the strip
+        int span = (int)(ps.outwardProgress * (numLeds / 2.0f));
+        int l0 = max(0, c - span), r1 = min(numLeds - 1, c + span);
+        for (int i = l0; i <= r1; i++) strip.setPixelColor(i, ps.mixedCol);
+      }
+    } else {
+      int span = (int)(ps.outwardProgress * (numLeds / 2.0f));
+      int l0 = max(0, c - span), r1 = min(numLeds - 1, c + span);
+      for (int i = l0; i <= r1; i++) {
+        uint32_t col = (ps.mode == 3) ? ((((i - c) & 1) == 0) ? ps.leftCol : ps.rightCol)
+                                      : ps.mixedCol;
+        strip.setPixelColor(i, col);
+      }
+      if (ps.mode != 3) {   // soft leading edge on the spreading paint
+        setPixelScaled(l0, ps.mixedCol, 0.9f);
+        setPixelScaled(r1, ps.mixedCol, 0.9f);
+      }
+    }
+  }
+  else if (ps.phase == PS_FILLED) {
+    for (int i = 0; i < numLeds; i++) {
+      uint32_t col = (ps.mode == 3) ? ((((i - c) & 1) == 0) ? ps.leftCol : ps.rightCol)
+                                    : ps.mixedCol;
+      strip.setPixelColor(i, col);
+    }
+  }
+
+  strip.show();
+}
+
+void updatePaintSplat() {
+  int v = constrain(currentVariation, 0, 4);
+  if (!ps.active || v != ps.mode) initPaintSplat();
+
+  unsigned long now = millis();
+  if (now - ps.lastStep >= PS_STEP_MS) {
+    ps.lastStep = now;
+    psStep(v);
+  }
+  psRender();
+}
+
+// ----------------------- SNAKE -----------------------
+// Autonomous 1-D snake: the head wraps around the strip ends, grows by
+// eating food, and dies when it bites its own tail (or a wall in var 3).
+// There is no user input - the head keeps moving in its current direction
+// until the round ends, then the game flashes red and restarts.
+//   Var 0 Classic Green    - green snake, red food
+//   Var 1 Speed Boost      - eating food sometimes halves the step delay
+//   Var 2 Rainbow Snake    - hue cycles continuously; food is white
+//   Var 3 Obstacle Course  - static red walls; hitting one kills the snake
+//   Var 4 Poison Food      - some pellets are dim blue poison (-3 segments)
+#define SNAKE_STEP_MS      50
+#define SNAKE_BOOST_MS     4000
+#define SNAKE_DEATH_TICKS  8
+
+struct Snake {
+  int body[MAX_LEDS];          // head at [0], tail at [len-1]
+  int len;
+  int dir;                     // +1 right, -1 left
+  int food;
+  bool foodPoison;
+  int walls[MAX_LEDS / 4];     // static red walls (var 3)
+  int numWalls;
+  bool speedBoost;
+  unsigned long boostUntil;
+  unsigned long lastStep;
+  int deathTicks;              // >0: flashing red before respawn
+  int eatFlash;                // >0: white flash at the eaten cell
+  int eatenAt;
+  uint8_t hueOffset;
+  int mode;
+  bool active;
+};
+Snake snake;
+
+bool snakeOccupied(int p) {
+  for (int i = 0; i < snake.len; i++) if (snake.body[i] == p) return true;
+  for (int i = 0; i < snake.numWalls; i++) if (snake.walls[i] == p) return true;
+  return false;
+}
+
+// Food is placed on a random empty LED, biased toward the arc ahead of the
+// head so the snake actually meets it on its current lap.
+void snakePlaceFood() {
+  for (int tries = 0; tries < 20; tries++) {
+    int p;
+    if (random(100) < 65) {
+      int offset = 1 + random(max(1, numLeds / 2));
+      p = ((snake.body[0] + offset * snake.dir) % numLeds + numLeds) % numLeds;
+    } else {
+      p = random(numLeds);
+    }
+    if (!snakeOccupied(p)) {
+      snake.food = p;
+      snake.foodPoison = (snake.mode == 4 && random(100) < 25);
+      return;
+    }
+  }
+  for (int i = 0; i < numLeds; i++) {      // fallback: first empty LED
+    if (!snakeOccupied(i)) {
+      snake.food = i;
+      snake.foodPoison = (snake.mode == 4 && random(100) < 25);
+      return;
+    }
+  }
+  snake.food = -1;                          // strip full, game ends soon
+}
+
+void initSnake() {
+  snake.mode = constrain(currentVariation, 0, 4);
+  snake.dir = random(2) ? 1 : -1;
+  snake.len = min(4, max(1, numLeds / 4));
+  int start = numLeds / 2;
+  for (int i = 0; i < snake.len; i++) {
+    snake.body[i] = ((start - i * snake.dir) % numLeds + numLeds) % numLeds;
+  }
+  snake.numWalls = 0;
+  if (snake.mode == 3) {                    // scatter a few red walls
+    int want = min(3, max(0, numLeds / 8));
+    for (int w = 0; w < want; w++) {
+      int p = random(numLeds), tries = 0;
+      while ((snakeOccupied(p) || p == snake.body[0]) && tries++ < 30) p = random(numLeds);
+      snake.walls[snake.numWalls++] = p;
+    }
+  }
+  snake.speedBoost = false;
+  snake.boostUntil = 0;
+  snake.deathTicks = 0;
+  snake.eatFlash = 0;
+  snake.hueOffset = (uint8_t)random(0, 256);
+  snake.lastStep = millis();
+  snake.active = true;
+  snakePlaceFood();
+}
+
+void snakeStep(int v) {
+  if (snake.deathTicks > 0) {               // death flash countdown
+    if (--snake.deathTicks <= 0) initSnake();
+    return;
+  }
+  if (snake.eatFlash > 0) snake.eatFlash--;
+
+  int head = snake.body[0];
+  int nh = head + snake.dir;
+  nh = ((nh % numLeds) + numLeds) % numLeds;   // wrap around the strip
+
+  bool wallHit = false;
+  if (v == 3) for (int i = 0; i < snake.numWalls; i++) if (snake.walls[i] == nh) wallHit = true;
+
+  // Self-collision: the tail vacates its cell unless we grow this step.
+  bool growing = (nh == snake.food);
+  int limit = growing ? snake.len : snake.len - 1;
+  bool bite = false;
+  for (int i = 0; i < limit; i++) if (snake.body[i] == nh) { bite = true; break; }
+
+  if (wallHit || bite) {
+    snake.deathTicks = SNAKE_DEATH_TICKS;
+    return;
+  }
+
+  // move: new head in front, tail follows (or stays when growing)
+  for (int i = snake.len - 1; i > 0; i--) snake.body[i] = snake.body[i - 1];
+  snake.body[0] = nh;
+  if (growing) {
+    if (snake.len < numLeds - 1) snake.len++;
+    snake.eatFlash = 2;
+    snake.eatenAt = nh;
+    if (v == 1 && random(100) < 30) {       // occasional speed boost
+      snake.speedBoost = true;
+      snake.boostUntil = millis() + SNAKE_BOOST_MS;
+    }
+    if (v == 4 && snake.foodPoison) {       // poison shrinks the snake
+      int remove = min(3, snake.len - 1);
+      snake.len -= remove;
+      if (snake.len <= 1) {                 // too short -> reset
+        snake.deathTicks = SNAKE_DEATH_TICKS;
+        return;
+      }
+    }
+    snakePlaceFood();
+  }
+}
+
+void snakeRender() {
+  strip.clear();
+  int v = snake.mode;
+
+  if (snake.food >= 0) {
+    if (v == 2)            strip.setPixelColor(snake.food, strip.Color(255, 255, 255));
+    else if (snake.foodPoison) strip.setPixelColor(snake.food, strip.Color(20, 20, 150));
+    else                   strip.setPixelColor(snake.food, strip.Color(255, 40, 40));
+  }
+  if (v == 3) {
+    for (int i = 0; i < snake.numWalls; i++) {
+      strip.setPixelColor(snake.walls[i], strip.Color(200, 30, 30));
+    }
+  }
+
+  if (snake.deathTicks > 0) {               // whole snake flashes red
+    for (int i = 0; i < snake.len; i++) strip.setPixelColor(snake.body[i], strip.Color(255, 0, 0));
+    strip.show();
+    return;
+  }
+
+  for (int i = 0; i < snake.len; i++) {
+    uint32_t col = (v == 2) ? wheel((uint8_t)(millis() / 25 + snake.hueOffset))
+                            : strip.Color(0, 255, 0);
+    if (i == 0) strip.setPixelColor(snake.body[0], col);       // bright head
+    else        setPixelScaled(snake.body[i], col, 0.5f);      // dimmer body
+  }
+  if (snake.eatFlash > 0) strip.setPixelColor(snake.eatenAt, strip.Color(255, 255, 255));
+
+  strip.show();
+}
+
+void updateSnake() {
+  int v = constrain(currentVariation, 0, 4);
+  if (!snake.active || v != snake.mode) initSnake();
+
+  unsigned long stepMs = SNAKE_STEP_MS;
+  if (snake.speedBoost && millis() < snake.boostUntil) stepMs /= 2;
+
+  unsigned long now = millis();
+  if (now - snake.lastStep >= stepMs) {
+    snake.lastStep = now;
+    snakeStep(v);
+  }
+  snakeRender();
+}
+
 void resetEffectState() {
   freeStaticPixelBuffer();
   // Fireflies: clear all fireflies, they will respawn naturally
@@ -2026,6 +2645,15 @@ void resetEffectState() {
   // Kaleidoscope
   kalVariation = -1;
   kalPhase = 0;
+
+  // Colliding Fill
+  cf.active = false;
+
+  // Paint Splat
+  ps.active = false;
+
+  // Snake
+  snake.active = false;
 }
 
 // ===========================  STATIC PIXEL PATTERN API ===========================
@@ -2234,6 +2862,15 @@ void setup() {
   kalVariation = -1; kalPhase = 0;
   for (int i = 0; i < numLeds; i++) { kalStarPhase[i] = 0; kalStarSpeed[i] = 50; }
 
+  // Colliding Fill
+  cf.active = false;
+
+  // Paint Splat
+  ps.active = false;
+
+  // Snake
+  snake.active = false;
+
   // General
   currentVariation=0; singleClickPending=false;
 
@@ -2276,6 +2913,9 @@ void loop() {
       case BOUNCING_BALLS:     updateBouncingBalls(); break;
       case LIGHTNING_STORM:    updateLightning(); break;
       case KALEIDOSCOPE:       updateKaleidoscope(); break;
+      case COLLIDING_FILL:     updateCollidingFill(); break;
+      case PAINT_SPLAT:        updatePaintSplat(); break;
+      case SNAKE:              updateSnake(); break;
     }
   }
 

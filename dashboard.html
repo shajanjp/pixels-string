@@ -585,7 +585,8 @@
             "CYLON", "DUAL_COMET", "SPARKLE_SWEEP", "POLICE", "PLASMA",
             "RAINBOW_GRADIENT", "PULSE_WAVE", "SINGLE_RUNNER",
             "AUDIO_VISUALIZER", "HEARTBEAT", "TWINKLE", "FIRE_FLICKER",
-            "BOUNCING_BALLS", "LIGHTNING_STORM", "KALEIDOSCOPE"
+            "BOUNCING_BALLS", "LIGHTNING_STORM", "KALEIDOSCOPE",
+            "COLLIDING_FILL", "PAINT_SPLAT", "SNAKE"
         ];
         const DOT_COUNT = 7;
 
@@ -980,6 +981,161 @@
             }, 130);
         }
 
+        // COLLIDING_FILL: two pixels race from the ends, collide with a flash,
+        // then return to the edges and park - repeating until the strip is full
+        function animateCollidingFill(btn) {
+            const parked = new Array(DOT_COUNT).fill(null); // parked dot colour or null
+            const s = { phase: 'run', left: 0, right: DOT_COUNT - 1, lcol: null, rcol: null,
+                        tL: 0, tR: DOT_COUNT - 1, flash: 0, hold: 0 };
+
+            function leftmostEmpty() { for (let i = 0; i < DOT_COUNT; i++) if (!parked[i]) return i; return -1; }
+            function rightmostEmpty() { for (let i = DOT_COUNT - 1; i >= 0; i--) if (!parked[i]) return i; return -1; }
+            function spawnPair() {
+                const L = leftmostEmpty(), R = rightmostEmpty();
+                if (L < 0) { s.phase = 'full'; s.hold = 20; return; }
+                if (L === R) { s.phase = 'final'; s.left = L; s.flash = 6; return; }
+                s.phase = 'run'; s.left = L; s.right = R; s.tL = L; s.tR = R;
+                const h1 = Math.floor(Math.random() * 256);
+                s.lcol = wheel(h1); s.rcol = wheel((h1 + 128) & 255);
+            }
+            function moveToTarget(which) {
+                const posKey = which === 'l' ? 'left' : 'right';
+                const tgtKey = which === 'l' ? 'tL' : 'tR';
+                const colKey = which === 'l' ? 'lcol' : 'rcol';
+                if (s[posKey] === s[tgtKey]) { parked[s[posKey]] = s[colKey]; return true; }
+                s[posKey] += s[tgtKey] > s[posKey] ? 1 : -1;
+                return false;
+            }
+            spawnPair();
+
+            return setInterval(() => {
+                if (s.phase === 'run') {
+                    const nl = s.left + 1, nr = s.right - 1;
+                    if (nl >= nr || (nl < DOT_COUNT && parked[nl]) || (nr >= 0 && parked[nr])) {
+                        s.phase = 'collide'; s.flash = 3;
+                    } else { s.left = nl; s.right = nr; }
+                } else if (s.phase === 'collide') {
+                    if (--s.flash <= 0) s.phase = 'return';
+                } else if (s.phase === 'return') {
+                    if (moveToTarget('l') && moveToTarget('r')) spawnPair();
+                } else if (s.phase === 'final') {
+                    if (--s.flash <= 0) { parked[s.left] = [255, 255, 255]; s.phase = 'full'; s.hold = 20; }
+                } else if (s.phase === 'full') {
+                    if (--s.hold <= 0) { parked.fill(null); spawnPair(); }
+                }
+
+                resetDots(btn);
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    if (parked[i]) setDot(btn, i, parked[i][0], parked[i][1], parked[i][2], 1);
+                }
+                if (s.phase === 'run' || s.phase === 'collide' || s.phase === 'return') {
+                    setDot(btn, s.left, s.lcol[0], s.lcol[1], s.lcol[2], 1);
+                    setDot(btn, s.right, s.rcol[0], s.rcol[1], s.rcol[2], 1);
+                }
+                if (s.phase === 'collide') {
+                    const c = Math.round((s.left + s.right) / 2);
+                    for (let i = Math.max(0, c - 1); i <= Math.min(DOT_COUNT - 1, c + 1); i++) {
+                        setDot(btn, i, 255, 255, 255, 1);
+                    }
+                }
+                if (s.phase === 'final' && s.flash % 2 === 1) {
+                    setDot(btn, s.left, s.lcol[0], s.lcol[1], s.lcol[2], 1);
+                }
+            }, 90);
+        }
+
+        // PAINT_SPLAT: two paint blobs race inward from the ends, collide
+        // with a white flash, then the blended colour oozes outward until the
+        // strip is full - then a fresh pair of colours arrives
+        function animatePaintSplat(btn) {
+            const mix = (c1, c2) => [
+                Math.round((c1[0] + c2[0]) / 2),
+                Math.round((c1[1] + c2[1]) / 2),
+                Math.round((c1[2] + c2[2]) / 2)
+            ];
+            const s = { phase: 'inward', left: 1, right: DOT_COUNT - 2, flash: 0, prog: 0, hold: 0 };
+            function spawnPair() {
+                const h = Math.floor(Math.random() * 256);
+                s.lcol = wheel(h);
+                s.rcol = wheel((h + 128) & 255);
+                s.mixed = mix(s.lcol, s.rcol);
+            }
+            spawnPair();
+
+            return setInterval(() => {
+                const c = Math.floor(DOT_COUNT / 2);
+                if (s.phase === 'inward') {
+                    if (s.left >= s.right) { s.phase = 'collide'; s.flash = 3; }
+                    else { s.left++; s.right--; }
+                } else if (s.phase === 'collide') {
+                    if (--s.flash <= 0) { s.phase = 'outward'; s.prog = 0; }
+                } else if (s.phase === 'outward') {
+                    s.prog += 0.07;
+                    if (s.prog >= 1) { s.prog = 1; s.phase = 'hold'; s.hold = 22; }
+                } else if (s.phase === 'hold') {
+                    if (--s.hold <= 0) { s.left = 1; s.right = DOT_COUNT - 2; s.phase = 'inward'; spawnPair(); }
+                }
+
+                resetDots(btn);
+                if (s.phase === 'inward' || s.phase === 'collide') {
+                    // two blobs (2 LEDs each) with a faint trail behind
+                    for (let t = 0; t < 2; t++) {
+                        setDot(btn, s.left - t, s.lcol[0], s.lcol[1], s.lcol[2], 1 - t * 0.3);
+                        setDot(btn, s.right + t, s.rcol[0], s.rcol[1], s.rcol[2], 1 - t * 0.3);
+                    }
+                    if (s.phase === 'collide') {
+                        for (let i = Math.max(0, c - 1); i <= Math.min(DOT_COUNT - 1, c + 1); i++) {
+                            setDot(btn, i, 255, 255, 255, 1);   // impact flash
+                        }
+                    }
+                } else {
+                    const span = Math.round(s.prog * DOT_COUNT / 2);
+                    for (let i = 0; i < DOT_COUNT; i++) {
+                        if (Math.abs(i - c) <= span) setDot(btn, i, s.mixed[0], s.mixed[1], s.mixed[2], 1);
+                    }
+                }
+            }, 90);
+        }
+
+        // SNAKE: an autonomous snake wraps around the strip, grows by eating
+        // food, and restarts when it bites its own tail
+        function animateSnake(btn) {
+            const N = DOT_COUNT;
+            const s = { body: [], dir: 1, food: null };
+            function placeFood() {
+                const occupied = new Set(s.body);
+                const empty = [];
+                for (let i = 0; i < N; i++) if (!occupied.has(i)) empty.push(i);
+                s.food = empty.length ? empty[Math.floor(Math.random() * empty.length)] : null;
+            }
+            function reset() {
+                s.dir = Math.random() < 0.5 ? 1 : -1;
+                const start = Math.floor(N / 2);
+                s.body = [start, start - s.dir, start - 2 * s.dir, start - 3 * s.dir]
+                    .map(p => ((p % N) + N) % N);
+                placeFood();
+            }
+            reset();
+
+            return setInterval(() => {
+                const head = s.body[0];
+                const nh = ((head + s.dir) % N + N) % N;
+                const growing = nh === s.food;
+                const limit = growing ? s.body.length : s.body.length - 1;
+                const bite = s.body.slice(0, limit).includes(nh);
+                if (bite) { reset(); return; }
+
+                s.body.unshift(nh);
+                if (!growing) s.body.pop(); else placeFood();
+
+                resetDots(btn);
+                if (s.food !== null) setDot(btn, s.food, 255, 40, 40, 1);   // red food
+                for (let i = 0; i < s.body.length; i++) {                   // green snake
+                    setDot(btn, s.body[i], 0, 255, 0, i === 0 ? 1 : 0.5);
+                }
+            }, 120);
+        }
+
         // Map effect name -> its animation function
         const ANIMATIONS = {
             FIREFLIES: animateFireflies,
@@ -1001,7 +1157,10 @@
             FIRE_FLICKER: animateFireFlicker,
             BOUNCING_BALLS: animateBouncingBalls,
             LIGHTNING_STORM: animateLightning,
-            KALEIDOSCOPE: animateKaleidoscope
+            KALEIDOSCOPE: animateKaleidoscope,
+            COLLIDING_FILL: animateCollidingFill,
+            PAINT_SPLAT: animatePaintSplat,
+            SNAKE: animateSnake
         };
 
         // ==============================================================
