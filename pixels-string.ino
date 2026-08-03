@@ -1342,30 +1342,70 @@ void updateAudioVisualizer() {
 }
 
 // ----------------------- HEARTBEAT -----------------------
-enum HBPhase { FIRST_BEAT, SECOND_BEAT, PAUSE };
-HBPhase hbPhase = PAUSE;
-unsigned long hbTimer = 0;
-float hbSigma = 2.0;
-float hbPulse1Brightness = 0, hbPulse2Brightness = 0;
-float hbPulse1Pos = 0, hbPulse2Pos = 0;
-uint8_t hbHue = 0;
-bool hbDual = false, hbEcho = false;
-unsigned long hbNextTrigger = 0;
+// The rhythm follows a real heart: a strong "lub" pulse, a softer "dub"
+// ~170ms later, then a rest sized by the heart rate (72 BPM) plus a little
+// beat-to-beat jitter so it never feels metronomic.
+enum HBPhase { HB_LUB, HB_DUB, HB_REST };
+HBPhase hbPhase = HB_REST;
+unsigned long hbLubTime = 0;      // onset of the strong "lub" pulse
+unsigned long hbDubTime = 0;      // onset of the softer "dub" pulse
+unsigned long hbRestStart = 0;    // when the resting glow began
+unsigned long hbNextBeat = 0;     // when the next beat should fire
 float hbBreathPhase = 0;
 bool hbLeftActive = true;
-float hbTravelPos = 0;
-bool hbTravelPause = false;
-unsigned long hbTravelPauseStart = 0;
+
+#define HB_BPM        72      // resting heart rate
+#define HB_LUB_DUB_MS 170     // S1 -> S2 interval
+#define HB_DUB_VIS_MS 300     // how long the dub phase lasts
+#define HB_TRAVEL_MS  500     // V3: time for the beat to cross the strip
+
+// Pulse envelope: a sharp attack and an exponential decay, the shape of an
+// arterial pulse waveform (fast rise, slower fall).
+float hbEnvelope(float elapsedMs) {
+  float t = elapsedMs * 0.001f;
+  if (t <= 0.0f) return 0.0f;
+  return (1.0f - expf(-t / 0.035f)) * expf(-t / 0.16f);
+}
+
+// Warm red that shifts from deep red at low intensity to a hot red-orange
+// at the peak, like light glowing through tissue.
+uint32_t hbMainColor(float env) {
+  float t = constrain(env, 0.0f, 1.0f);
+  uint8_t r = (uint8_t)(255.0f * t);
+  uint8_t g = (uint8_t)((14.0f + 52.0f * t) * t);
+  uint8_t b = (uint8_t)((10.0f + 28.0f * t) * t);
+  return strip.Color(r, g, b);
+}
+
+void drawHeartPulse(float pos, float sigma, uint32_t col) {
+  float s2 = 2.0f * sigma * sigma;
+  for (int i = 0; i < numLeds; i++) {
+    float dist = i - pos;
+    float lum = expf(-(dist * dist) / s2);
+    if (lum < 0.012f) continue;
+    uint8_t r = (uint8_t)(((col >> 16) & 0xFF) * lum);
+    uint8_t g = (uint8_t)(((col >> 8) & 0xFF) * lum);
+    uint8_t b = (uint8_t)((col & 0xFF) * lum);
+    strip.setPixelColor(i, strip.Color(r, g, b));
+  }
+}
 
 void updateHeartbeat() {
   unsigned long now = millis();
 
-  // V0: Mac breathing - smooth brightness pulse across all LEDs
+  // V0: natural breathing - inhale, brief hold, slower exhale, smoothstep eased
   if (currentVariation == 0) {
     hbBreathPhase += 0.02f;
-    float brightness = (sin(hbBreathPhase) + 1.0f) / 2.0f;
-    uint8_t b = (uint8_t)(20 + brightness * 235);
-    uint32_t col = strip.Color(b, 0, 0);
+    float period = 4.8f;
+    float p = fmodf(hbBreathPhase, period);
+    float t;
+    if (p < 1.8f)      t = p / 1.8f;                 // inhale
+    else if (p < 2.2f) t = 1.0f;                     // held breath
+    else               t = 1.0f - (p - 2.2f) / 2.6f; // exhale
+    t = constrain(t, 0.0f, 1.0f);
+    float eased = t * t * (3.0f - 2.0f * t);
+    float b = 15.0f + eased * 240.0f;
+    uint32_t col = strip.Color((uint8_t)b, (uint8_t)(b * 0.07f), (uint8_t)(b * 0.05f));
     for (int i = 0; i < numLeds; i++) {
       strip.setPixelColor(i, col);
     }
@@ -1373,138 +1413,89 @@ void updateHeartbeat() {
     return;
   }
 
-  // V3: Travelling beat - single pulse moving left to right
+  // V3: one beat per cycle glides along the strip (eased), then rests
   if (currentVariation == 3) {
-    if (!hbTravelPause) {
-      hbTravelPos += 0.7f;
-      if (hbTravelPos >= numLeds - 1) {
-        hbTravelPos = numLeds - 1;
-        hbTravelPause = true;
-        hbTravelPauseStart = now;
+    if (hbPhase == HB_REST) {
+      if (now >= hbNextBeat) {
+        hbPhase = HB_LUB;
+        hbLubTime = now;
       }
-    } else {
-      if (now - hbTravelPauseStart >= 800) {
-        hbTravelPause = false;
-        hbTravelPos = 0;
-      }
+    } else if (now - hbLubTime >= HB_TRAVEL_MS) {
+      hbPhase = HB_REST;
+      hbRestStart = now;
+      hbNextBeat = now + 60000UL / HB_BPM + random(-45, 46);
     }
 
+    float t = (float)(now - hbLubTime);
+    float prog = constrain(t / HB_TRAVEL_MS, 0.0f, 1.0f);
+    float eased = prog * prog * (3.0f - 2.0f * prog);
+    float pos = eased * (numLeds - 1.0f);
+    float sigma = 2.5f + 5.0f * eased;   // widens as it travels
+    float env = hbEnvelope(t);
+
     strip.clear();
-    int head = (int)hbTravelPos;
-    uint32_t col = strip.Color(255, 0, 0);
-    strip.setPixelColor(head, col);
-    for (int t = 1; t <= 3; t++) {
-      int idx = head - t;
-      if (idx < 0) continue;
-      float bright = 1.0f - t * 0.3f;
-      uint8_t r = (uint8_t)(255 * bright);
-      strip.setPixelColor(idx, strip.Color(r, 0, 0));
-    }
+    float restElapsed = (hbPhase == HB_REST) ? (float)(now - hbRestStart) : 0.0f;
+    float glow = 0.03f + 0.05f * expf(-restElapsed / 1100.0f);
+    uint32_t glowCol = strip.Color((uint8_t)(255.0f * glow),
+                                   (uint8_t)(18.0f * glow),
+                                   (uint8_t)(12.0f * glow));
+    for (int i = 0; i < numLeds; i++) strip.setPixelColor(i, glowCol);
+    drawHeartPulse(pos, sigma, hbMainColor(env));
     strip.show();
     return;
   }
 
-  // V1, V2, V4: Realistic heartbeat rhythm (lub-dub-pause)
-  if (now >= hbNextTrigger) {
-    switch (hbPhase) {
-      case PAUSE:
-        hbPhase = FIRST_BEAT;
-        hbTimer = now;
-        hbPulse1Brightness = 1.0;
-        hbPulse2Brightness = 0.0;
-        if (currentVariation == 2) hbLeftActive = !hbLeftActive;
-        break;
-
-      case FIRST_BEAT:
-        hbPhase = SECOND_BEAT;
-        hbTimer = now;
-        hbPulse1Brightness = 1.0;
-        hbPulse2Brightness = 0.8;
-        break;
-
-      case SECOND_BEAT:
-        hbPhase = PAUSE;
-        hbTimer = now;
-        hbNextTrigger = now + 700;
-        break;
+  // V1, V2, V4: physiological lub-dub-rest rhythm
+  if (hbPhase == HB_REST) {
+    if (now >= hbNextBeat) {
+      hbPhase = HB_LUB;
+      hbLubTime = now;
+      if (currentVariation == 2) hbLeftActive = !hbLeftActive;
     }
+  } else if (hbPhase == HB_LUB) {
+    if (now - hbLubTime >= HB_LUB_DUB_MS) {
+      hbPhase = HB_DUB;
+      hbDubTime = now;
+    }
+  } else if (now - hbDubTime >= HB_DUB_VIS_MS) {
+    hbPhase = HB_REST;
+    hbRestStart = now;
+    hbNextBeat = now + 60000UL / HB_BPM + random(-45, 46);
   }
 
-  float elapsed = (now - hbTimer) / 1000.0f;
-  float pulseDuration = 0.35f;
-
-  if (hbPhase == FIRST_BEAT || hbPhase == SECOND_BEAT) {
-    float progress = constrain(elapsed / pulseDuration, 0.0f, 1.0f);
-    float sigmaGrowth = 0;
-    switch (currentVariation) {
-      case 1: sigmaGrowth = 6.0; break;
-      case 2: sigmaGrowth = 5.0; break;
-      case 4: sigmaGrowth = 16.0; break;
-    }
-    hbSigma = 2.0 + progress * sigmaGrowth;
-    float fade = (1.0f - progress) * 0.9f + 0.1f;
-    if (hbPhase == FIRST_BEAT) {
-      hbPulse1Brightness = fade;
-    } else {
-      hbPulse1Brightness = fade;
-      hbPulse2Brightness = fade * 0.8f;
-    }
-
-    if (elapsed > pulseDuration) {
-      if (hbPhase == FIRST_BEAT) {
-        hbPhase = SECOND_BEAT;
-        hbTimer = now;
-        hbPulse1Brightness = 1.0;
-        hbPulse2Brightness = 0.8;
-        hbSigma = 2.0;
-      } else {
-        hbPhase = PAUSE;
-        hbTimer = now;
-        hbNextTrigger = now + 700;
-      }
-    }
+  float lubElapsed = (float)(now - hbLubTime);
+  float lubEnv = hbEnvelope(lubElapsed);
+  // dub is only rendered after it has actually fired (phase entered)
+  float dubEnv = 0.0f;
+  if (hbPhase == HB_DUB || hbPhase == HB_REST) {
+    dubEnv = 0.62f * hbEnvelope((float)(now - hbDubTime));
   }
 
-  float center1 = 0, center2 = 0;
-  bool dual = false;
-  switch (currentVariation) {
-    case 1:
-      center1 = numLeds / 2.0f;
-      break;
-    case 2:
-      if (hbLeftActive) center1 = numLeds / 4.0f;
-      else              center1 = 3.0f * numLeds / 4.0f;
-      break;
-    case 4:
-      center1 = numLeds / 2.0f;
-      dual = true;
-      center2 = center1;
-      break;
+  float sigmaMax = (currentVariation == 4) ? 15.0f
+                 : (currentVariation == 1) ? 7.0f : 6.0f;
+  float sigma = 2.5f + (1.0f - expf(-lubElapsed / 90.0f)) * sigmaMax;
+
+  float center1 = numLeds * 0.5f;
+  if (currentVariation == 2) {
+    center1 = hbLeftActive ? numLeds * 0.25f : numLeds * 0.75f;
   }
 
   strip.clear();
-  auto drawPulse = [&](float pos, float sigma, float brightness, uint32_t baseCol) {
-    for (int i = 0; i < numLeds; i++) {
-      float dist = i - pos;
-      float intensity = brightness * exp(- (dist * dist) / (2.0f * sigma * sigma));
-      if (intensity < 0.01f) continue;
-      uint8_t r = (uint8_t)((baseCol >> 16 & 0xFF) * intensity);
-      uint8_t g = (uint8_t)((baseCol >> 8 & 0xFF) * intensity);
-      uint8_t b = (uint8_t)((baseCol & 0xFF) * intensity);
-      strip.setPixelColor(i, strip.Color(r, g, b));
-    }
-  };
+  float restElapsed = (hbPhase == HB_REST) ? (float)(now - hbRestStart) : 0.0f;
+  float glow = 0.03f + 0.05f * expf(-restElapsed / 1100.0f);
+  uint32_t glowCol = strip.Color((uint8_t)(255.0f * glow),
+                                 (uint8_t)(18.0f * glow),
+                                 (uint8_t)(12.0f * glow));
+  for (int i = 0; i < numLeds; i++) strip.setPixelColor(i, glowCol);
 
-  uint32_t mainColor = strip.Color(255, 20, 20);
-  uint32_t echoColor = strip.Color(255, 60, 60);
-
-  drawPulse(center1, hbSigma, hbPulse1Brightness, mainColor);
-
-  if ((currentVariation == 4 && dual) || (hbPhase == SECOND_BEAT && hbPulse2Brightness > 0.01f)) {
-    float echoSigma = hbSigma * 0.85f;
-    drawPulse(center2, echoSigma, hbPulse2Brightness, echoColor);
+  drawHeartPulse(center1, sigma, hbMainColor(lubEnv));
+  if (currentVariation == 4) {
+    // echo pump: a softer pulse lagging the main one, spreading wider
+    float echoEnv = 0.45f * hbEnvelope(lubElapsed - 130.0f);
+    drawHeartPulse(center1, sigma * 1.25f, hbMainColor(echoEnv));
+  } else {
+    drawHeartPulse(center1, sigma * 0.85f, hbMainColor(dubEnv));
   }
-
   strip.show();
 }
 
@@ -2008,13 +1999,13 @@ void resetEffectState() {
   if (bands) { delete[] bands; bands = nullptr; numBands = 0; }
 
   // Heartbeat - reset all phases
-  hbPhase = PAUSE;
-  hbNextTrigger = millis();
-  hbPulse1Brightness = 0;
-  hbPulse2Brightness = 0;
+  hbPhase = HB_REST;
+  hbLubTime = 0;
+  hbDubTime = 0;
+  hbRestStart = 0;
+  hbNextBeat = millis();
   hbBreathPhase = 0;
-  hbTravelPos = 0;
-  hbTravelPause = false;
+  hbLeftActive = true;
 
   // Twinkle
   twinkleVariation = -1;
@@ -2222,8 +2213,8 @@ void setup() {
   delete[] bands; bands=nullptr; numBands=0;
 
   // Heartbeat
-  hbPhase=PAUSE; hbNextTrigger=millis(); hbPulse1Brightness=0; hbPulse2Brightness=0;
-  hbBreathPhase = 0; hbLeftActive = true; hbTravelPos = 0; hbTravelPause = false;
+  hbPhase=HB_REST; hbLubTime=0; hbDubTime=0; hbRestStart=0; hbNextBeat=millis();
+  hbBreathPhase = 0; hbLeftActive = true;
 
   // Twinkle
   twinkleVariation = -1; numStars = 0;
