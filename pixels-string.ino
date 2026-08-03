@@ -31,12 +31,17 @@ enum Effect {
   AUDIO_VISUALIZER,
   HEARTBEAT,
   STATIC_PIXEL,
+  TWINKLE,
+  FIRE_FLICKER,
+  BOUNCING_BALLS,
+  LIGHTNING_STORM,
+  KALEIDOSCOPE,
   NUM_EFFECTS
 };
 
 Effect currentEffect = FIREFLIES;
 int currentVariation = 0;
-const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1};
+const int variationsCount[NUM_EFFECTS] = {5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,1,5,5,5,5,5};
 
 bool powerOn = true;
 uint8_t globalBrightness = 255;   // 0-255, applied globally via strip.setBrightness()
@@ -146,6 +151,11 @@ String effectName(Effect e) {
     case AUDIO_VISUALIZER: return "AUDIO_VISUALIZER";
     case HEARTBEAT: return "HEARTBEAT";
     case STATIC_PIXEL: return "STATIC_PIXEL";
+    case TWINKLE: return "TWINKLE";
+    case FIRE_FLICKER: return "FIRE_FLICKER";
+    case BOUNCING_BALLS: return "BOUNCING_BALLS";
+    case LIGHTNING_STORM: return "LIGHTNING_STORM";
+    case KALEIDOSCOPE: return "KALEIDOSCOPE";
     default: return "UNKNOWN";
   }
 }
@@ -567,8 +577,9 @@ void handleClient() {
     helpResponse += "  Valid names: FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS,\n";
     helpResponse += "               CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA,\n";
     helpResponse += "               RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER,\n";
-    helpResponse += "               AUDIO_VISUALIZER, HEARTBEAT\n\n";
-    helpResponse += "GET /api/effect?index=<0-14>\n";
+    helpResponse += "               AUDIO_VISUALIZER, HEARTBEAT, TWINKLE, FIRE_FLICKER,\n";
+    helpResponse += "               BOUNCING_BALLS, LIGHTNING_STORM, KALEIDOSCOPE\n\n";
+    helpResponse += "GET /api/effect?index=<0-20>\n";
     helpResponse += "  Set the active effect by its numeric index (0 = FIREFLIES).\n\n";
     helpResponse += "GET /api/variation?index=<0-4>\n";
     helpResponse += "  Set the variation of the current effect (0-based).\n\n";
@@ -1191,6 +1202,7 @@ RunnerState runner;
 
 void updateSingleRunner() {
   strip.clear();
+  runner.speed = 1.0f;   // one full LED per frame = fastest coherent runner
 
   if (runner.bounce) {
     runner.pos += runner.speed * runner.direction;
@@ -1496,6 +1508,460 @@ void updateHeartbeat() {
   strip.show();
 }
 
+// ----------------------- TWINKLE (STARRY NIGHT) -----------------------
+#define MAX_STARS 150
+struct Star {
+  int led;
+  float phase, speed;
+  uint8_t hue;
+  uint8_t peak;
+  float floor;
+  int novaTimer;
+};
+Star stars[MAX_STARS];
+int numStars = 0;
+int twinkleVariation = -1;
+
+void initTwinkle() {
+  int v = constrain(currentVariation, 0, 4);
+  int densities[] = { 10, 12, 14, 60, 25 };   // stars per 50 LEDs
+  int count = numLeds * densities[v] / 50;
+  if (count > MAX_STARS) count = MAX_STARS;
+  numStars = count;
+  const int speedMin[] = { 10, 12, 15, 40, 15 };
+  const int speedMax[] = { 25, 30, 40, 100, 45 };
+  for (int i = 0; i < numStars; i++) {
+    stars[i].led = random(numLeds);
+    stars[i].phase = random(0, 628) / 100.0f;
+    stars[i].speed = random(speedMin[v], speedMax[v]) / 1000.0f;
+    stars[i].hue = random(0, 256);
+    stars[i].peak = random(60, 255);
+    stars[i].floor = 0.05f + random(0, 20) / 100.0f;
+    stars[i].novaTimer = 0;
+  }
+  twinkleVariation = v;
+}
+
+void updateTwinkle() {
+  int v = constrain(currentVariation, 0, 4);
+  if (v != twinkleVariation) initTwinkle();
+  strip.clear();
+  for (int i = 0; i < numStars; i++) {
+    stars[i].phase += stars[i].speed;
+    float tw = (sin(stars[i].phase) + 1.0f) / 2.0f;
+    float b = stars[i].floor + (1.0f - stars[i].floor) * tw * tw;
+    if (v == 4) {   // occasional supernova flashes
+      if (stars[i].novaTimer > 0) { stars[i].novaTimer--; b = 1.0f; }
+      else if (random(3000) < 2) stars[i].novaTimer = 8 + random(0, 8);
+    }
+    uint8_t br = (uint8_t)(b * stars[i].peak);
+    uint32_t col;
+    switch (v) {
+      case 0: col = strip.Color(br, br, br); break;                      // white, slow
+      case 1: col = strip.Color(br, (uint8_t)(br * 0.85f), (uint8_t)(br * 0.35f)); break; // golden
+      case 2: {                                                          // multicolor
+        uint32_t c = wheel(stars[i].hue);
+        col = strip.Color((uint8_t)((c >> 16 & 0xFF) * b),
+                          (uint8_t)((c >> 8 & 0xFF) * b),
+                          (uint8_t)((c & 0xFF) * b));
+        break;
+      }
+      case 3: col = strip.Color(br, br, br); break;                      // dense, fast
+      default: col = strip.Color((uint8_t)(br * 0.6f), (uint8_t)(br * 0.8f), br); break; // cold blue
+    }
+    strip.setPixelColor(stars[i].led, col);
+  }
+  strip.show();
+}
+
+// ----------------------- FIRE / FLAME FLICKER -----------------------
+#define MAX_FIRE_LEDS 300
+uint8_t fireHeat[MAX_FIRE_LEDS];
+int fireVariation = -1;
+
+void initFireFlicker() {
+  for (int i = 0; i < numLeds; i++) fireHeat[i] = 0;
+  fireVariation = currentVariation;
+}
+
+uint32_t fireColor(int heat, int variation) {
+  heat = constrain(heat, 0, 255);
+  if (variation == 3) {   // gas-like blue flame
+    if (heat < 85) {
+      uint8_t b = (uint8_t)(heat * 2);
+      return strip.Color(0, (uint8_t)(b * 0.4f), b);
+    } else if (heat < 170) {
+      uint8_t t = (uint8_t)((heat - 85) * 2);
+      return strip.Color((uint8_t)(t * 0.4f), (uint8_t)(85 + t * 0.6f), 170);
+    } else {
+      uint8_t t = (uint8_t)((heat - 170) * 3);
+      return strip.Color((uint8_t)(170 + t * 0.5f), 255, 255);
+    }
+  }
+  if (variation == 4) {   // rainbow fire
+    uint32_t c = wheel((uint8_t)(heat * 2));
+    float s = 0.3f + heat / 255.0f * 0.7f;
+    return strip.Color((uint8_t)((c >> 16 & 0xFF) * s),
+                       (uint8_t)((c >> 8 & 0xFF) * s),
+                       (uint8_t)((c & 0xFF) * s));
+  }
+  // classic fire palette: black -> dark red -> red -> orange -> yellow -> white
+  if (heat < 60)  return strip.Color((uint8_t)(heat * 0.8f), 0, 0);
+  if (heat < 120) return strip.Color(120, (uint8_t)((heat - 60) * 2), 0);
+  if (heat < 200) return strip.Color((uint8_t)(120 + (heat - 120) * 1.7f),
+                                     (uint8_t)(96 + (heat - 120) * 1.6f), 0);
+  return strip.Color(255, 255, (uint8_t)((heat - 200) * 4.6f));
+}
+
+void updateFireFlicker() {
+  int v = constrain(currentVariation, 0, 4);
+  if (v != fireVariation) initFireFlicker();
+
+  int base, sparking, cooling;
+  switch (v) {
+    case 0: base = numLeds / 3; sparking = 12; cooling = 8; break;    // candle
+    case 1: base = numLeds / 2; sparking = 30; cooling = 10; break;   // campfire
+    case 2: base = numLeds;     sparking = 55; cooling = 14; break;   // inferno
+    case 3: base = numLeds / 2; sparking = 22; cooling = 9; break;    // blue flame
+    default: base = numLeds / 2; sparking = 32; cooling = 10; break;  // rainbow fire
+  }
+  if (base < 3) base = 3;
+
+  // cool everything
+  for (int i = 0; i < numLeds; i++) {
+    int cool = random(0, cooling + 2);
+    fireHeat[i] = (fireHeat[i] > cool) ? (uint8_t)(fireHeat[i] - cool) : 0;
+  }
+  // heat drifts upward (LED 0 = bottom)
+  for (int i = numLeds - 1; i >= 3; i--) {
+    fireHeat[i] = (fireHeat[i-1] + fireHeat[i-2] + fireHeat[i-3]) / 3;
+  }
+  // ignite sparks near the base
+  for (int i = 0; i < base; i++) {
+    if (random(255) < sparking) {
+      fireHeat[i] += random(40, 150);
+      if (fireHeat[i] > 255) fireHeat[i] = 255;
+    }
+  }
+  // keep the flame near its source (not for the inferno)
+  if (v != 2) {
+    for (int i = 3; i < numLeds; i++) {
+      float atten = 1.0f - (float)(i - 2) / (base * 2.0f);
+      if (atten <= 0) fireHeat[i] = 0;
+      else fireHeat[i] = (uint8_t)(fireHeat[i] * atten);
+    }
+  }
+
+  for (int i = 0; i < numLeds; i++) {
+    strip.setPixelColor(i, fireColor(fireHeat[i], v));
+  }
+  strip.show();
+}
+
+// ----------------------- BOUNCING BALLS -----------------------
+#define MAX_BALLS 5
+#define BALL_TRAIL 6
+struct Ball {
+  float pos, vel;
+  float radius;
+  uint8_t hue;
+  float trail[BALL_TRAIL];
+};
+Ball balls[MAX_BALLS];
+int numBalls = 0;
+int ballsVariation = -1;
+float ballGravity = 0.1f;
+int ballR[MAX_LEDS], ballG[MAX_LEDS], ballB[MAX_LEDS];
+bool ballsSettled = false;         // true once all balls have come to rest
+int ballsStillFrames = 0;          // consecutive frames of near-zero velocity
+unsigned long ballsSettleTime = 0;
+#define BALLS_STILL_FRAMES 30      // frames of near-zero velocity before "settled"
+#define BALLS_RESTART_MS 5000      // pause after settling before restarting
+
+void initBalls() {
+  ballsSettled = false;
+  ballsStillFrames = 0;
+  int v = constrain(currentVariation, 0, 4);
+  int counts[] = { 1, 2, 3, 4, 5 };
+  numBalls = counts[v];
+  ballGravity = (v == 0) ? 0.04f : 0.12f;
+  for (int i = 0; i < numBalls; i++) {
+    balls[i].pos = random(0, numLeds * 10) / 10.0f;
+    balls[i].vel = random(-15, 15) / 10.0f;
+    balls[i].radius = (v == 2) ? (1 + random(0, 3)) : 1.0f;
+    balls[i].hue = (v == 4) ? (uint8_t)(i * 51) : (uint8_t)random(0, 256);
+    for (int t = 0; t < BALL_TRAIL; t++) balls[i].trail[t] = balls[i].pos;
+  }
+  ballsVariation = v;
+}
+
+void updateBouncingBalls() {
+  int v = constrain(currentVariation, 0, 4);
+  if (v != ballsVariation) initBalls();
+
+  // physics: gravity + bounces at both ends
+  float maxPos = numLeds - 1.0f;
+  for (int i = 0; i < numBalls; i++) {
+    for (int t = BALL_TRAIL - 1; t > 0; t--) balls[i].trail[t] = balls[i].trail[t-1];
+    balls[i].trail[0] = balls[i].pos;
+
+    balls[i].vel += ballGravity;
+    balls[i].pos += balls[i].vel;
+    if (balls[i].pos < balls[i].radius) {
+      balls[i].pos = balls[i].radius;
+      balls[i].vel = -balls[i].vel * 0.85f;
+    }
+    if (balls[i].pos > maxPos - balls[i].radius) {
+      balls[i].pos = maxPos - balls[i].radius;
+      balls[i].vel = -balls[i].vel * 0.85f;
+    }
+    if (v == 0 && random(100) < 40) balls[i].hue += 1;   // slow hue cycle
+  }
+
+  // settle detection: once every ball has come to rest, hold the final frame
+  // for a pause, then re-launch the balls for another round
+  if (!ballsSettled) {
+    bool allStill = true;
+    for (int i = 0; i < numBalls; i++) {
+      if (fabs(balls[i].vel) > 0.1f) { allStill = false; break; }
+    }
+    if (allStill) {
+      if (++ballsStillFrames >= BALLS_STILL_FRAMES) {
+        ballsSettled = true;
+        ballsSettleTime = millis();
+      }
+    } else {
+      ballsStillFrames = 0;
+    }
+  } else if (millis() - ballsSettleTime >= BALLS_RESTART_MS) {
+    initBalls();
+  }
+
+  // elastic collisions (equal mass -> swap velocities)
+  if (v == 4) {
+    for (int i = 0; i < numBalls; i++) {
+      for (int j = i + 1; j < numBalls; j++) {
+        float dist = fabs(balls[i].pos - balls[j].pos);
+        float minD = balls[i].radius + balls[j].radius;
+        if (dist < minD) {
+          float tmp = balls[i].vel; balls[i].vel = balls[j].vel; balls[j].vel = tmp;
+          float mid = (balls[i].pos + balls[j].pos) / 2.0f;
+          balls[i].pos = mid - minD / 2.0f;
+          balls[j].pos = mid + minD / 2.0f;
+        }
+      }
+    }
+  }
+
+  // render with additive blending (colors mix where balls overlap)
+  for (int j = 0; j < numLeds; j++) { ballR[j] = 0; ballG[j] = 0; ballB[j] = 0; }
+  for (int i = 0; i < numBalls; i++) {
+    uint32_t col = (v == 3) ? strip.Color(255, 255, 255) : wheel(balls[i].hue);
+    uint8_t cr = (col >> 16) & 0xFF, cg = (col >> 8) & 0xFF, cb = col & 0xFF;
+    float sigma = (v == 3) ? 1.6f : (balls[i].radius + 0.5f);
+    int win = (int)(sigma * 3.2f) + 2;
+    int c0 = max(0, (int)balls[i].pos - win), c1 = min(numLeds - 1, (int)balls[i].pos + win);
+    for (int j = c0; j <= c1; j++) {
+      float dist = j - balls[i].pos;
+      float intensity = exp(-(dist * dist) / (2.0f * sigma * sigma));
+      ballR[j] += (int)(cr * intensity);
+      ballG[j] += (int)(cg * intensity);
+      ballB[j] += (int)(cb * intensity);
+    }
+    // motion blur trail for variation 3
+    if (v == 3) {
+      for (int t = 1; t < BALL_TRAIL; t++) {
+        float br = (1.0f - t / (float)BALL_TRAIL) * 0.5f;
+        int tp = (int)balls[i].trail[t];
+        if (tp < 0 || tp >= numLeds) continue;
+        ballR[tp] += (int)(255 * br);
+        ballG[tp] += (int)(255 * br);
+        ballB[tp] += (int)(255 * br);
+      }
+    }
+  }
+  for (int j = 0; j < numLeds; j++) {
+    strip.setPixelColor(j, strip.Color(constrain(ballR[j], 0, 255),
+                                       constrain(ballG[j], 0, 255),
+                                       constrain(ballB[j], 0, 255)));
+  }
+  strip.show();
+}
+
+// ----------------------- LIGHTNING STORM -----------------------
+enum LightningState { LS_IDLE, LS_FLASH, LS_ROLL, LS_AFTERGLOW };
+LightningState ls = LS_IDLE;
+unsigned long lsTimer = 0;
+float lsRollPos = 0;
+int lsSegStart = 0, lsSegLen = 0;
+
+void updateLightning() {
+  int v = constrain(currentVariation, 0, 4);
+  unsigned long now = millis();
+
+  switch (ls) {
+    case LS_IDLE: {
+      unsigned long pause;
+      switch (v) {
+        case 0: pause = random(1000, 3000); break;      // single flash, 1-3s pauses
+        case 1: pause = random(250, 900); break;        // random segments
+        case 2: pause = random(500, 1400); break;       // rolling
+        case 3: pause = random(400, 1100); break;       // violet
+        default: pause = random(60, 180); break;        // frequent storm
+      }
+      lsTimer = now;
+      if (v == 2) {
+        ls = LS_ROLL;
+        lsRollPos = 0;
+      } else {
+        ls = LS_FLASH;
+        if (v == 1) {
+          lsSegLen = min(numLeds, (int)random(20, 41));
+          lsSegStart = (lsSegLen >= numLeds) ? 0 : random(0, numLeds - lsSegLen + 1);
+        } else {
+          lsSegStart = 0; lsSegLen = numLeds;
+        }
+      }
+      break;
+    }
+    case LS_FLASH:
+      if (now - lsTimer > 70) { ls = LS_AFTERGLOW; lsTimer = now; }
+      break;
+    case LS_ROLL:
+      if (now - lsTimer > 25) {
+        lsTimer = now;
+        lsRollPos += random(3, 8);
+        if (lsRollPos >= numLeds + 3) { ls = LS_AFTERGLOW; lsTimer = now; }
+      }
+      break;
+    case LS_AFTERGLOW:
+      if (now - lsTimer > 500) ls = LS_IDLE;
+      break;
+  }
+
+  strip.clear();
+  switch (ls) {
+    case LS_FLASH: {
+      if (random(100) < 60) {   // flickering burst
+        uint32_t col = (v == 3) ? strip.Color(150, 130, 255) : strip.Color(255, 255, 255);
+        for (int i = lsSegStart; i < lsSegStart + lsSegLen; i++) {
+          if (i < 0 || i >= numLeds) continue;
+          strip.setPixelColor(i, col);
+        }
+      }
+      break;
+    }
+    case LS_ROLL: {
+      uint32_t col = (v == 3) ? strip.Color(160, 140, 255) : strip.Color(255, 255, 255);
+      int h = (int)lsRollPos;
+      for (int i = max(0, h - 3); i <= min(numLeds - 1, h + 3); i++) {
+        float dist = abs(i - lsRollPos);
+        float br = 1.0f - dist / 4.0f;
+        if (br <= 0) continue;
+        strip.setPixelColor(i, strip.Color((uint8_t)(((col >> 16) & 0xFF) * br),
+                                           (uint8_t)(((col >> 8) & 0xFF) * br),
+                                           (uint8_t)((col & 0xFF) * br)));
+      }
+      break;
+    }
+    case LS_AFTERGLOW: {
+      float t = (now - lsTimer) / 500.0f;
+      float glow = (1.0f - t);
+      glow *= glow;
+      uint8_t br = (uint8_t)(glow * 120);
+      uint32_t col = (v == 3) ? strip.Color((uint8_t)(br * 0.6f), (uint8_t)(br * 0.5f), br)
+                              : strip.Color(br / 2, br / 2, br);
+      for (int i = 0; i < numLeds; i++) strip.setPixelColor(i, col);
+      break;
+    }
+    default: break;
+  }
+  strip.show();
+}
+
+// ----------------------- KALEIDOSCOPE -----------------------
+float kalPhase = 0;
+int kalVariation = -1;
+float kalStarPhase[MAX_LEDS];
+uint8_t kalStarSpeed[MAX_LEDS];
+
+void initKaleidoscope() {
+  kalVariation = currentVariation;
+  kalPhase = 0;
+  for (int i = 0; i < numLeds; i++) {
+    kalStarPhase[i] = random(0, 628) / 100.0f;
+    kalStarSpeed[i] = random(20, 70);
+  }
+}
+
+uint32_t kalBaseColor(int baseIdx, int segLen, int v) {
+  float t = (float)baseIdx / segLen;   // 0..1 within the base segment
+  switch (v) {
+    case 0: {   // slowly moving rainbow grain
+      return wheel((uint8_t)(t * 255 + kalPhase * 40));
+    }
+    case 1: {   // twinkling stars mirrored perfectly
+      kalStarPhase[baseIdx] += kalStarSpeed[baseIdx] / 1000.0f;
+      float tw = (sin(kalStarPhase[baseIdx]) + 1.0f) / 2.0f;
+      uint8_t b = (uint8_t)(20 + tw * tw * 235);
+      return strip.Color(b, b, (uint8_t)(b * 0.7f));
+    }
+    case 2: {   // plasma-like noise repeated
+      float n = sin(t * 18.0f + kalPhase * 2.0f) * sin(t * 7.0f - kalPhase)
+              + sin(t * 31.0f + kalPhase * 1.4f) * 0.5f;
+      float nn = (n + 1.5f) / 3.0f;
+      return wheel((uint8_t)(nn * 255));
+    }
+    case 3: {   // mirror + rotation, moving colour washes
+      int rot = (int)(kalPhase * 20) % segLen;
+      int idx = (baseIdx + rot) % segLen;
+      return wheel((uint8_t)((float)idx / segLen * 255 + kalPhase * 80));
+    }
+    default: {  // laser-show: live pattern, mirrored outward
+      return wheel((uint8_t)(t * 255 + kalPhase * 60));
+    }
+  }
+}
+
+void updateKaleidoscope() {
+  int v = constrain(currentVariation, 0, 4);
+  if (v != kalVariation) initKaleidoscope();
+  kalPhase += 0.01f;
+  if (kalPhase > 1000) kalPhase -= 1000;
+
+  int fold = 4;
+  switch (v) {
+    case 0: fold = 2; break;
+    case 1: fold = 4; break;
+    case 2: fold = 8; break;
+    case 3: fold = 4; break;
+  }
+  int segLen = numLeds / fold;
+  if (segLen < 1) segLen = 1;
+
+  strip.clear();
+  for (int i = 0; i < numLeds; i++) {
+    int b;
+    if (v == 4) {
+      // laser-show: the centre half is live, outer quarters mirror it
+      int c = numLeds / 4;
+      int ce = c + numLeds / 2 - 1;
+      if (i < c)         b = 2 * c - 1 - i;
+      else if (i <= ce)  b = i;
+      else               b = 2 * (c + numLeds / 2) - 1 - i;
+      segLen = ce - c + 1;
+      b -= c;
+    } else {
+      int seg = i / segLen;
+      int local = i - seg * segLen;
+      if (seg % 2 == 1) local = segLen - 1 - local;   // alternate segments mirror
+      b = local;
+    }
+    strip.setPixelColor(i, kalBaseColor(b, segLen, v));
+  }
+  strip.show();
+}
+
 void resetEffectState() {
   freeStaticPixelBuffer();
   // Fireflies: clear all fireflies, they will respawn naturally
@@ -1549,6 +2015,26 @@ void resetEffectState() {
   hbBreathPhase = 0;
   hbTravelPos = 0;
   hbTravelPause = false;
+
+  // Twinkle
+  twinkleVariation = -1;
+  numStars = 0;
+
+  // Fire Flicker
+  fireVariation = -1;
+  for (int i = 0; i < numLeds; i++) fireHeat[i] = 0;
+
+  // Bouncing Balls
+  ballsVariation = -1;
+  numBalls = 0;
+
+  // Lightning Storm
+  ls = LS_IDLE;
+  lsTimer = 0;
+
+  // Kaleidoscope
+  kalVariation = -1;
+  kalPhase = 0;
 }
 
 // ===========================  STATIC PIXEL PATTERN API ===========================
@@ -1739,6 +2225,24 @@ void setup() {
   hbPhase=PAUSE; hbNextTrigger=millis(); hbPulse1Brightness=0; hbPulse2Brightness=0;
   hbBreathPhase = 0; hbLeftActive = true; hbTravelPos = 0; hbTravelPause = false;
 
+  // Twinkle
+  twinkleVariation = -1; numStars = 0;
+
+  // Fire Flicker
+  fireVariation = -1;
+  for (int i = 0; i < numLeds; i++) fireHeat[i] = 0;
+
+  // Bouncing Balls
+  ballsVariation = -1; numBalls = 0;
+  ballsSettled = false; ballsStillFrames = 0;
+
+  // Lightning Storm
+  ls = LS_IDLE; lsTimer = 0;
+
+  // Kaleidoscope
+  kalVariation = -1; kalPhase = 0;
+  for (int i = 0; i < numLeds; i++) { kalStarPhase[i] = 0; kalStarSpeed[i] = 50; }
+
   // General
   currentVariation=0; singleClickPending=false;
 
@@ -1776,6 +2280,11 @@ void loop() {
       case AUDIO_VISUALIZER: updateAudioVisualizer(); break;
       case HEARTBEAT:        updateHeartbeat(); break;
       case STATIC_PIXEL:       updateStaticPixel(); break;
+      case TWINKLE:            updateTwinkle(); break;
+      case FIRE_FLICKER:       updateFireFlicker(); break;
+      case BOUNCING_BALLS:     updateBouncingBalls(); break;
+      case LIGHTNING_STORM:    updateLightning(); break;
+      case KALEIDOSCOPE:       updateKaleidoscope(); break;
     }
   }
 
@@ -1792,5 +2301,7 @@ void loop() {
     connectWiFi();
   }
 
-  delay(20);
+  // Run the SINGLE_RUNNER effect at high speed: only a 10ms frame delay.
+  // Frames are then limited by strip.show() + loop overhead + a 10ms pause.
+  delay(powerOn && currentEffect == SINGLE_RUNNER ? 15 : 20);
 }

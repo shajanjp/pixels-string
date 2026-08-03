@@ -584,7 +584,8 @@
             "FIREFLIES", "RAINBOW_SWIPE", "AURORA", "COMET", "CHASING_DOTS",
             "CYLON", "DUAL_COMET", "SPARKLE_SWEEP", "POLICE", "PLASMA",
             "RAINBOW_GRADIENT", "PULSE_WAVE", "SINGLE_RUNNER",
-            "AUDIO_VISUALIZER", "HEARTBEAT"
+            "AUDIO_VISUALIZER", "HEARTBEAT", "TWINKLE", "FIRE_FLICKER",
+            "BOUNCING_BALLS", "LIGHTNING_STORM", "KALEIDOSCOPE"
         ];
         const DOT_COUNT = 7;
 
@@ -853,6 +854,132 @@
             }, 100);
         }
 
+        // TWINKLE: static stars pulse at their own rate (no motion)
+        function animateTwinkle(btn) {
+            const stars = [];
+            for (let i = 0; i < DOT_COUNT; i++) {
+                stars.push({ phase: Math.random() * 6.28, speed: 0.15 + Math.random() * 0.5 });
+            }
+            return setInterval(() => {
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    stars[i].phase += stars[i].speed;
+                    const tw = (Math.sin(stars[i].phase) + 1) / 2;
+                    const b = 0.1 + tw * tw * 0.9;
+                    setDot(btn, i, 255, 255, 255, b);
+                }
+            }, 110);
+        }
+
+        // FIRE_FLICKER: heat rises from the bottom, flame palette (restarts every 3s)
+        function animateFireFlicker(btn) {
+            const CYCLE_MS = 3000;
+            const heat = Array(DOT_COUNT).fill(0);
+            let cycleStart = performance.now();
+            return setInterval(() => {
+                const elapsed = performance.now() - cycleStart;
+                const dying = elapsed > CYCLE_MS * 0.75;   // flame dies out in the last quarter
+
+                // heat drifts upward (LED 0 = base)
+                for (let i = DOT_COUNT - 1; i >= 3; i--) {
+                    heat[i] = (heat[i-1] + heat[i-2] + heat[i-3]) / 3;
+                }
+                // cool a little (faster while dying so the flame goes out)
+                const cool = dying ? 30 : 14;
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    heat[i] = Math.max(0, heat[i] - Math.random() * cool);
+                }
+                // spark at the base (stops while dying)
+                if (!dying && Math.random() < 0.45) {
+                    heat[0] = Math.min(255, heat[0] + 50 + Math.random() * 130);
+                }
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    const h = heat[i];
+                    let r, g, b;
+                    if (h < 60)      { r = h; g = 0; b = 0; }
+                    else if (h < 120) { r = 120; g = (h - 60) * 2; b = 0; }
+                    else if (h < 200) { r = 120 + (h - 120) * 1.7; g = 96 + (h - 120) * 1.6; b = 0; }
+                    else             { r = 255; g = 255; b = (h - 200) * 4.6; }
+                    setDot(btn, i, r, g, b, 1);
+                }
+                // restart the cycle once the flame has gone out
+                if (elapsed >= CYCLE_MS) {
+                    for (let i = 0; i < DOT_COUNT; i++) heat[i] = 0;
+                    cycleStart = performance.now();
+                }
+            }, 90);
+        }
+
+        // BOUNCING_BALLS: balls bounce with gravity, colours blend (restarts every 3s)
+        function animateBouncingBalls(btn) {
+            const CYCLE_MS = 3000;
+            const START = [
+                { pos: 0, vel: 0.9, hue: 20 },
+                { pos: DOT_COUNT - 1, vel: -0.7, hue: 200 },
+                { pos: 3, vel: 0.6, hue: 100 }
+            ];
+            const balls = START.map(s => ({ pos: s.pos, vel: s.vel, hue: s.hue }));
+            let cycleStart = performance.now();
+            return setInterval(() => {
+                const elapsed = performance.now() - cycleStart;
+                if (elapsed >= CYCLE_MS) {
+                    for (let i = 0; i < balls.length; i++) {
+                        balls[i].pos = START[i].pos;
+                        balls[i].vel = START[i].vel;
+                    }
+                    cycleStart = performance.now();
+                }
+                resetDots(btn);
+                for (const ball of balls) {
+                    ball.vel += 0.18;
+                    ball.pos += ball.vel;
+                    if (ball.pos >= DOT_COUNT - 1) { ball.pos = DOT_COUNT - 1; ball.vel = -Math.abs(ball.vel) * 0.85; }
+                    if (ball.pos <= 0) { ball.pos = 0; ball.vel = Math.abs(ball.vel) * 0.85; }
+                    const idx = Math.round(ball.pos);
+                    const [r, g, b] = wheel(ball.hue);
+                    setDot(btn, idx, r, g, b, 1);
+                    if (idx > 0) setDot(btn, idx - 1, r, g, b, 0.35);
+                    if (idx < DOT_COUNT - 1) setDot(btn, idx + 1, r, g, b, 0.35);
+                }
+            }, 120);
+        }
+
+        // LIGHTNING_STORM: bright flashes with a fading afterglow
+        function animateLightning(btn) {
+            let state = 'idle', glow = 0, t = 0;
+            return setInterval(() => {
+                t++;
+                if (state === 'idle') {
+                    resetDots(btn);
+                    if (Math.random() < 0.12) { state = 'flash'; }
+                } else if (state === 'flash') {
+                    if (Math.random() < 0.6) {
+                        for (let i = 0; i < DOT_COUNT; i++) setDot(btn, i, 255, 255, 255, 1);
+                    } else {
+                        resetDots(btn);
+                    }
+                    if (t % 2 === 0) { state = 'fade'; glow = 1; }
+                } else {
+                    glow *= 0.8;
+                    for (let i = 0; i < DOT_COUNT; i++) setDot(btn, i, 150, 140, 255, glow);
+                    if (glow < 0.02) { state = 'idle'; resetDots(btn); }
+                }
+            }, 80);
+        }
+
+        // KALEIDOSCOPE: mirrored symmetry across the dots
+        function animateKaleidoscope(btn) {
+            let offset = 0;
+            return setInterval(() => {
+                offset += 0.35;
+                for (let i = 0; i < DOT_COUNT; i++) {
+                    let local = i % 4;
+                    if (Math.floor(i / 4) % 2 === 1) local = 3 - local;
+                    const [r, g, b] = wheel((local * 32 + offset * 20) & 255);
+                    setDot(btn, i, r, g, b, 1);
+                }
+            }, 130);
+        }
+
         // Map effect name -> its animation function
         const ANIMATIONS = {
             FIREFLIES: animateFireflies,
@@ -869,7 +996,12 @@
             PULSE_WAVE: animatePulseWave,
             SINGLE_RUNNER: animateSingleRunner,
             AUDIO_VISUALIZER: animateAudioViz,
-            HEARTBEAT: animateHeartbeat
+            HEARTBEAT: animateHeartbeat,
+            TWINKLE: animateTwinkle,
+            FIRE_FLICKER: animateFireFlicker,
+            BOUNCING_BALLS: animateBouncingBalls,
+            LIGHTNING_STORM: animateLightning,
+            KALEIDOSCOPE: animateKaleidoscope
         };
 
         // ==============================================================

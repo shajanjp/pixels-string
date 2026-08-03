@@ -1,12 +1,12 @@
 # Pixels String
 
-A WiFi-enabled ESP32 LED pixel string controller with 15 stunning effects, 5 variations per effect, a physical button interface, and an embedded web dashboard for browser-based control.
+A WiFi-enabled ESP32 LED pixel string controller with 20 stunning effects, 5 variations per effect, a physical button interface, and an embedded web dashboard for browser-based control.
 
 ![Pixels String Dashboard](pixels-string-dashboard-screenshot.jpg)
 
 ## Features
 
-- **15 LED Effects** - Fireflies, Rainbow Swipe, Aurora, Comet, Chasing Dots, Cylon, Dual Comet, Sparkle Sweep, Police, Plasma, Rainbow Gradient, Pulse Wave, Single Runner, Audio Visualizer, Heartbeat
+- **20 LED Effects** - Fireflies, Rainbow Swipe, Aurora, Comet, Chasing Dots, Cylon, Dual Comet, Sparkle Sweep, Police, Plasma, Rainbow Gradient, Pulse Wave, Single Runner, Audio Visualizer, Heartbeat, Twinkle, Fire Flicker, Bouncing Balls, Lightning Storm, Kaleidoscope
 - **5 Variations Per Effect** - Cycle through variations with successive taps on the same button
 - **Web Dashboard** - Embedded HTML/CSS/JS dashboard served directly from the ESP32, with animated icons and API feedback
 - **Physical Button** - Single-click to cycle effects, double-click for variations, long-press for power on/off
@@ -103,13 +103,13 @@ Set the active effect by name.
 
 **Valid names:**
 
-FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS, CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA, RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER, AUDIO_VISUALIZER, HEARTBEAT
+FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS, CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA, RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER, AUDIO_VISUALIZER, HEARTBEAT, TWINKLE, FIRE_FLICKER, BOUNCING_BALLS, LIGHTNING_STORM, KALEIDOSCOPE
 
 ```
 GET /api/effect?name=AURORA
 ```
 
-### `GET /api/effect?index=<0-14>`
+### `GET /api/effect?index=<0-20>`
 
 Set effect by numeric index.
 
@@ -152,7 +152,7 @@ Returns a JSON object with the current state.
   "variation": 2,
   "variationMax": 4,
   "power": "on",
-  "numEffects": 15,
+  "numEffects": 21,
   "ledCount": 50,
   "brightness": 255,
   "colorOrder": "GRB"
@@ -256,6 +256,11 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128
 | 12 | **SINGLE_RUNNER** | Random hue / Rainbow-position / Time-hue / White / Tail trail |
 | 13 | **AUDIO_VISUALIZER** | Simulated spectrum analyzers with varying band counts & styles |
 | 14 | **HEARTBEAT** | Mac breathing / Lub-dub center / Alternating side / Travelling / Dual pulse |
+| 15 | **TWINKLE** | White slow / Golden / Multicolor / Dense fast / Cold blue + supernovae |
+| 16 | **FIRE_FLICKER** | Candle / Campfire / Inferno / Blue flame / Rainbow fire |
+| 17 | **BOUNCING_BALLS** | 1 slow ball / 2 balls / 3 sized balls / 4 white with trails / 5 rainbow elastic |
+| 18 | **LIGHTNING_STORM** | Full-strip flash / Random segments / Rolling wave / Violet afterglow / Frequent storm |
+| 19 | **KALEIDOSCOPE** | 2-fold mirror / 4-fold twinkle / 8-fold plasma / Rotating washes / Laser-show centre |
 
 ## Physical Button Controls
 
