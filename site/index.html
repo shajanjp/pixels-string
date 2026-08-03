@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixels String - WiFi ESP32 LED Pixel String Controller</title>
+<meta name="description" content="Pixels String is a WiFi-enabled ESP32 LED pixel string controller with 15 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta name="robots" content="index, follow">
+<meta name="author" content="Shajan Jacob">
+<meta name="keywords" content="ESP32, NeoPixel, WS2812B, SK6812, LED strip, pixel string, LED controller, Arduino, REST API, web dashboard, WiFi LED, mDNS">
+<link rel="canonical" href="https://shajanjacob.com/pixels-string/">
+
+<!-- Favicon -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23fff44f'/></svg>">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#fff44f">
+<meta name="application-name" content="Pixels String">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Pixels String">
+<meta property="og:title" content="Pixels String - WiFi ESP32 LED Pixel String Controller">
+<meta property="og:description" content="A WiFi-enabled ESP32 LED pixel string controller with 15 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta property="og:url" content="https://shajanjacob.com/pixels-string/">
+<meta property="og:image" content="https://shajanjacob.com/pixels-string/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Pixels String lemon yellow logo">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pixels String - WiFi ESP32 LED Pixel String Controller">
+<meta name="twitter:description" content="A WiFi-enabled ESP32 LED pixel string controller with 15 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta name="twitter:image" content="https://shajanjacob.com/pixels-string/og-image.png">
+
+<!-- Structured data (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://shajanjacob.com/pixels-string/#website",
+      "name": "Pixels String",
+      "url": "https://shajanjacob.com/pixels-string/",
+      "description": "A WiFi-enabled ESP32 LED pixel string controller with 15 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://shajanjacob.com/pixels-string/#software",
+      "name": "Pixels String",
+      "description": "WiFi-enabled ESP32 LED pixel string controller with 15 effects, 5 variations per effect, a physical button interface, an embedded web dashboard, and a full REST API.",
+      "url": "https://shajanjacob.com/pixels-string/",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "ESP32 (Arduino / PlatformIO)",
+      "softwareVersion": "1.0.0",
+      "isAccessibleForFree": true,
+      "license": "https://opensource.org/licenses/ISC",
+      "codeRepository": "https://github.com/shajanjp/pixels-string",
+      "downloadUrl": "https://github.com/shajanjp/pixels-string",
+      "featureList": [
+        "15 LED effects with 5 variations each",
+        "Embedded web dashboard",
+        "REST API control",
+        "Physical button interface",
+        "WiFi with static IP and mDNS",
+        "Persistent settings in NVS"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "@id": "https://github.com/shajanjp",
+        "name": "Shajan Jacob",
+        "url": "https://github.com/shajanjp"
+      }
+    }
+  ]
+}
+</script>
+<style>
+  :root {
+    --bg: #0d0d13;
+    --bg-alt: #14141c;
+    --card: #1a1a24;
+    --card-hover: #21212e;
+    --border: #2a2a38;
+    --text: #e8e8f0;
+    --text-dim: #9b9bb0;
+    --accent: #8b5cf6;
+    --accent-2: #34d399;
+    --accent-3: #60a5fa;
+    --accent-4: #ef4444;
+    --code-bg: #101018;
+    --radius: 12px;
+    --maxw: 1080px;
+    --mono: "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, "Liberation Mono", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Header / Nav ---------- */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(13, 13, 19, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .brand-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff44f; /* lemon yellow */
+    flex-shrink: 0;
+  }
+  .nav-links { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.88rem;
+    padding: 6px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: color .15s, background .15s;
+  }
+  .nav-links a:hover { color: var(--text); background: var(--card); }
+  .nav-links a.active { color: var(--text); background: var(--card); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 96px 24px 64px;
+    text-align: center;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    background: rgba(52, 211, 153, 0.08);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 18px;
+    background: linear-gradient(120deg, #a78bfa, #60a5fa, #34d399);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero p {
+    max-width: 640px;
+    margin: 0 auto 28px;
+    color: var(--text-dim);
+    font-size: 1.08rem;
+  }
+  .hero-ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s, background .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #6d4fd8);
+    color: #fff;
+    box-shadow: 0 6px 24px rgba(139, 92, 246, 0.35);
+  }
+  .btn-ghost {
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: var(--card);
+  }
+  .btn-ghost:hover { background: var(--card-hover); }
+  .hero-features {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 48px;
+    flex-wrap: wrap;
+  }
+  .feature-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 16px 7px 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    transition: border-color .15s, transform .15s, background .15s;
+  }
+  .feature-chip:hover { border-color: #3a3a4e; transform: translateY(-2px); background: var(--card-hover); }
+  .ficon {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: #fff;
+  }
+
+  /* ---------- Layout ---------- */
+  main { max-width: var(--maxw); margin: 0 auto; padding: 0 24px 80px; }
+  section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+  h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  h2 .hash { color: var(--accent); }
+  .section-sub { color: var(--text-dim); max-width: 720px; margin-bottom: 32px; }
+  h3 { font-size: 1.1rem; margin: 28px 0 12px; }
+  p { margin-bottom: 14px; }
+  a { color: var(--accent-3); }
+  .muted { color: var(--text-dim); }
+
+  /* ---------- Cards / Grids ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    transition: border-color .15s, transform .15s, background .15s;
+  }
+  .card:hover { border-color: #3a3a4e; transform: translateY(-3px); background: var(--card-hover); }
+  .card h3 { margin: 0 0 10px; font-size: 1.02rem; }
+  .card p { margin: 0; font-size: 0.92rem; color: var(--text-dim); }
+  .card .icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; font-weight: 800;
+    margin-bottom: 14px;
+    color: #fff;
+  }
+  .c-green { background: linear-gradient(135deg, #15803d, #22c55e); }
+  .c-blue { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+  .c-purple { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+  .c-red { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+  .c-amber { background: linear-gradient(135deg, #b45309, #f59e0b); }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 520px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--bg-alt); color: var(--text); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ---------- Code blocks ---------- */
+  .code-block { position: relative; margin: 16px 0; }
+  .code-block pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.84rem;
+    line-height: 1.6;
+    color: #d7d7e6;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: #3a3a4e; }
+  .copy-btn.copied { color: var(--accent-2); border-color: rgba(52,211,153,0.5); }
+  .code-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin: 4px 0 -6px;
+    font-family: var(--mono);
+  }
+
+  /* ---------- API method chips ---------- */
+  .endpoint {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 18px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  .endpoint-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .method {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+  }
+  .m-get { background: rgba(52, 211, 153, 0.15); color: var(--accent-2); }
+  .path { font-family: var(--mono); font-size: 0.92rem; word-break: break-all; }
+  .endpoint-desc { color: var(--text-dim); font-size: 0.88rem; }
+  .endpoint-body { padding: 0 18px 18px; display: none; }
+  .endpoint.open .endpoint-body { display: block; }
+  .endpoint.open .chev { transform: rotate(180deg); }
+  .chev { transition: transform .2s; color: var(--text-dim); margin-left: auto; font-size: 0.75rem; }
+  .param-grid { display: grid; gap: 8px; margin: 12px 0; }
+  .param-row {
+    display: grid;
+    grid-template-columns: 140px 90px 1fr;
+    gap: 12px;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    background: var(--bg-alt);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    align-items: baseline;
+  }
+  .param-row code { font-size: 0.8rem; }
+  .req { color: var(--accent-4); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .opt { color: var(--text-dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ---------- Callouts ---------- */
+  .note {
+    border-left: 3px solid var(--accent-3);
+    background: rgba(96, 165, 250, 0.07);
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 0.92rem;
+  }
+  .note.warn { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.07); }
+  .note code { font-family: var(--mono); font-size: 0.85em; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
+
+  /* ---------- Lists ---------- */
+  ul.checklist { list-style: none; margin: 0 0 14px; }
+  ul.checklist li { padding-left: 28px; position: relative; margin-bottom: 8px; }
+  ul.checklist li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--accent-2);
+    font-weight: 800;
+  }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 36px 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--text-dim); }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    .hero { padding-top: 64px; }
+    .param-row { grid-template-columns: 1fr; gap: 4px; }
+    nav { height: 54px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a class="brand" href="#top"><span class="brand-dot"></span>Pixels String</a>
+    <div class="nav-links">
+      <a href="#overview">Overview</a>
+      <a href="#features">Features</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#setup">Setup</a>
+      <a href="#configuration">Configuration</a>
+      <a href="#usage">Usage</a>
+      <a href="#api">REST API</a>
+      <a href="#effects">Effects</a>
+    </div>
+  </nav>
+</header>
+
+<div class="hero" id="top">
+  <span class="hero-badge">WiFi &middot; ESP32 &middot; NeoPixel</span>
+  <h1>Pixels String</h1>
+  <p>A WiFi-enabled ESP32 LED pixel string controller with <strong>15 stunning effects</strong>, <strong>5 variations per effect</strong>, a physical button interface, and an embedded web dashboard for browser-based control.</p>
+  <div class="hero-ctas">
+    <a class="btn btn-primary" href="#setup">Get Started</a>
+    <a class="btn btn-ghost" href="#api">View REST API</a>
+    <a class="btn btn-ghost" href="https://github.com/shajanjp/pixels-string" target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <div class="hero-features">
+    <span class="feature-chip"><span class="ficon c-blue">ESP</span>ESP32 Powered</span>
+    <span class="feature-chip"><span class="ficon c-green">API</span>REST API</span>
+    <span class="feature-chip"><span class="ficon c-purple">DASH</span>Built-in Dashboard</span>
+    <span class="feature-chip"><span class="ficon c-amber">NVS</span>Persistence</span>
+    <span class="feature-chip"><span class="ficon c-red">WiFi</span>WiFi + mDNS</span>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= OVERVIEW ================= -->
+  <section id="overview">
+    <h2><span class="hash">#</span> Overview</h2>
+    <p class="section-sub">Pixels String turns an ESP32 dev board and a NeoPixel-compatible LED strip into a self-contained ambient lighting system. It runs fully on-device, with no cloud services or phone apps required.</p>
+
+    <p>The device hosts its own web dashboard directly from the ESP32, so any browser on your network can control every effect, variation, color, and brightness. A <a href="#hardware">physical button</a> gives you the same control without a browser. A complete <a href="#api">REST API</a> lets you integrate the strip into scripts, home automation, or other projects.</p>
+
+    <p>All settings are persisted in NVS (non-volatile storage), so your LED count, color order, brightness, and active effect survive reboots and power loss. WiFi is monitored continuously and reconnects automatically.</p>
+
+    <h3>What's in the box</h3>
+    <ul class="checklist">
+      <li>15 built-in LED effects, each with 5 variations (75 total looks)</li>
+      <li>Embedded web dashboard with animated per-effect icons and live API feedback</li>
+      <li>Physical button: single-click, double-click, and long-press controls</li>
+      <li>Full REST API for programmatic control over HTTP</li>
+      <li>Static IP and mDNS hostname for reliable, predictable addressing</li>
+      <li>Persistent LED count, color order, and brightness via NVS</li>
+      <li>WiFi auto-reconnect with 10-second retry loop</li>
+    </ul>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section id="features">
+    <h2><span class="hash">#</span> Features</h2>
+    <p class="section-sub">Everything the controller does out of the box.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon c-purple">15</div>
+        <h3>15 LED Effects</h3>
+        <p>Fireflies, Rainbow Swipe, Aurora, Comet, Chasing Dots, Cylon, Dual Comet, Sparkle Sweep, Police, Plasma, Rainbow Gradient, Pulse Wave, Single Runner, Audio Visualizer, and Heartbeat.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-green">5x</div>
+        <h3>5 Variations Per Effect</h3>
+        <p>Every effect ships with 5 distinct variations. Tap the same button (or click the same card) to cycle through them, from firefly counts to color palettes to speeds.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-blue">WWW</div>
+        <h3>Web Dashboard</h3>
+        <p>A full HTML/CSS/JS dashboard is served straight from the ESP32. Animated icons, glowing active-effect highlight, toast notifications, and instant API feedback.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-amber">BTN</div>
+        <h3>Physical Button</h3>
+        <p>Single-click cycles effects, double-click cycles variations, and a 2-second long-press toggles power. Debounced with internal pull-up on GPIO 9.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-red">API</div>
+        <h3>REST API</h3>
+        <p>9 HTTP endpoints for effects, variations, power, brightness, pixel patterns, and configuration. JSON responses make scripting and automation trivial.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-blue">IP</div>
+        <h3>Static IP &amp; mDNS</h3>
+        <p>Configurable static IP with gateway and subnet, plus an mDNS hostname (default <code>neopixel.local</code>) so you never have to hunt for the device.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-green">NVS</div>
+        <h3>Persistent Settings</h3>
+        <p>LED count, color order, and brightness are stored in NVS and survive reboots. The active effect and power state persist in memory during a session.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-red">WIFI</div>
+        <h3>Auto-Reconnect</h3>
+        <p>WiFi is monitored continuously and reconnects automatically with a 10-second retry loop, keeping the dashboard and API reachable.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HARDWARE ================= -->
+  <section id="hardware">
+    <h2><span class="hash">#</span> Hardware Requirements</h2>
+    <p class="section-sub">You need an ESP32, an LED strip, and a power supply. Everything else is optional.</p>
+    <ul class="checklist">
+      <li>ESP32 development board</li>
+      <li>NeoPixel-compatible LED strip (WS2812B, SK6812, etc.)</li>
+      <li>3.3V-5V level shifter (recommended for longer strips)</li>
+      <li>Physical button (optional, GPIO 9 with internal pull-up)</li>
+      <li>5V power supply (sized for your LED count)</li>
+    </ul>
+    <h3>Pin Connections</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Component</th><th>GPIO Pin</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>LED Strip Data</td><td><code>GPIO 2</code></td><td>Default <code>PIN</code> in the sketch</td></tr>
+          <tr><td>Button (optional)</td><td><code>GPIO 9</code></td><td>Wired as <code>INPUT_PULLUP</code> to GND</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note warn">The software limit is <code>MAX_LEDS = 300</code> in <code>pixels-string.ino</code>. Adjust it if your hardware supports fewer or more, within ESP32 memory constraints.</div>
+  </section>
+
+  <!-- ================= SETUP ================= -->
+  <section id="setup">
+    <h2><span class="hash">#</span> Getting Started</h2>
+    <p class="section-sub">From a fresh clone to a glowing strip in five steps.</p>
+
+    <h3>1. Clone and configure</h3>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>git clone https://github.com/shajanjp/pixels-string.git
+cd pixels-string</pre>
+    </div>
+
+    <h3>2. WiFi and network config</h3>
+    <p>Copy the example config and fill in your network details:</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>cp config.example.h config.h</pre>
+    </div>
+    <p>Then edit <code>config.h</code>:</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>#define WIFI_SSID       "your-ssid"
+#define WIFI_PASSWORD   "your-password"
+
+#define STATIC_IP       IPAddress(192, 168, 1, 55)
+#define GATEWAY         IPAddress(192, 168, 1, 1)
+#define SUBNET          IPAddress(255, 255, 255, 0)
+
+#define MDNS_HOSTNAME   "neopixel"
+#define DASHBOARD_URL   "http://shajanjacob.com/pixels-string?ip=192.168.1.55"</pre>
+    </div>
+    <div class="note"><code>config.h</code> is gitignored, so your credentials never end up in version control.</div>
+
+    <h3>3. (Optional) Modify the dashboard</h3>
+    <p>The dashboard is embedded in the firmware. Edit <code>dashboard.html</code>, then regenerate the embedded header:</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>npm install
+node html-to-header.js</pre>
+    </div>
+    <p>This minifies the HTML, CSS, and JS and produces <code>dashboard_html.h</code>, which is compiled into the firmware.</p>
+
+    <h3>4. Upload to your ESP32</h3>
+    <p>Open <code>pixels-string.ino</code> in the Arduino IDE or VS Code with PlatformIO, select your ESP32 board, and upload. Required libraries:</p>
+    <ul class="checklist">
+      <li><code>Adafruit_NeoPixel</code> - LED strip driver</li>
+      <li><code>WiFi</code>, <code>ESPmDNS</code>, <code>Preferences</code> - included with the ESP32 core</li>
+    </ul>
+
+    <h3>5. Find your device</h3>
+    <ul class="checklist">
+      <li>Check your router's DHCP client list for the static IP you configured</li>
+      <li>Or use mDNS: <code>http://neopixel.local</code></li>
+    </ul>
+  </section>
+
+  <!-- ================= CONFIGURATION ================= -->
+  <section id="configuration">
+    <h2><span class="hash">#</span> Configuration</h2>
+    <p class="section-sub">What lives in config.h and what can be changed at runtime.</p>
+
+    <h3>Network settings (config.h)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Setting</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>WIFI_SSID</code></td><td><code>"your-ssid"</code></td><td>WiFi network name</td></tr>
+          <tr><td><code>WIFI_PASSWORD</code></td><td><code>"your-password"</code></td><td>WiFi password</td></tr>
+          <tr><td><code>STATIC_IP</code></td><td><code>192.168.1.55</code></td><td>Static IP assigned to the device</td></tr>
+          <tr><td><code>GATEWAY</code></td><td><code>192.168.1.1</code></td><td>Network gateway</td></tr>
+          <tr><td><code>SUBNET</code></td><td><code>255.255.255.0</code></td><td>Network subnet mask</td></tr>
+          <tr><td><code>MDNS_HOSTNAME</code></td><td><code>"neopixel"</code></td><td>mDNS name, resolves to <code>neopixel.local</code></td></tr>
+          <tr><td><code>DASHBOARD_URL</code></td><td>hosted page</td><td>URL the device redirects to for the web dashboard</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Runtime settings (persisted in NVS)</h3>
+    <p>These are configured via the <a href="#api">API</a> and survive reboots:</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Setting</th><th>Range</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ledCount</code></td><td><code>1 - 300</code></td><td>Number of LEDs on the strip</td></tr>
+          <tr><td><code>colorOrder</code></td><td><code>RGB / RBG / GRB / GBR / BRG / BGR</code></td><td>NeoPixel color order matching your strip's wiring</td></tr>
+          <tr><td><code>brightness</code></td><td><code>0 - 255</code></td><td>Global brightness applied to every effect</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">Why color order matters: some strips wire channels as RGB, others as GRB, BRG, BGR, and so on. If colors look swapped, set the correct order via <code>/config?colorOrder=...</code> - it applies immediately and is saved to NVS.</div>
+  </section>
+
+  <!-- ================= USAGE ================= -->
+  <section id="usage">
+    <h2><span class="hash">#</span> Using the Device</h2>
+    <p class="section-sub">Control the strip two ways: the web dashboard or the physical button.</p>
+
+    <h3>Web dashboard</h3>
+    <p>Open the device's root URL (<code>http://neopixel.local</code> or your static IP) in any browser. The ESP32 serves a full-featured dashboard where every effect is a card with an animated icon:</p>
+    <ul class="checklist">
+      <li><strong>Click a card</strong> to activate that effect</li>
+      <li><strong>Click the same card again</strong> to cycle through its 5 variations - a toast notification shows the variation number</li>
+      <li><strong>The active effect</strong> is highlighted with a glowing border</li>
+    </ul>
+    <p>The dashboard also exposes power and brightness controls, all with live API feedback.</p>
+
+    <h3>Physical button controls</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Action</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Single click</strong></td><td>Cycle to the next effect</td></tr>
+          <tr><td><strong>Double click</strong></td><td>Cycle variation (0 -&gt; 1 -&gt; 2 -&gt; 3 -&gt; 4 -&gt; 0)</td></tr>
+          <tr><td><strong>Long press (2s)</strong></td><td>Toggle power on/off</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= REST API ================= -->
+  <section id="api">
+    <h2><span class="hash">#</span> REST API</h2>
+    <p class="section-sub">All endpoints are served on port 80 and accept plain <code>GET</code> requests with query parameters. JSON endpoints return readable, unescaped JSON for easy parsing.</p>
+    <div class="note">Tip: run <code>GET /help</code> on the device for a plain-text listing of every available endpoint.</div>
+
+    <!-- effect -->
+    <div class="endpoint open" id="ep-effect">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/api/effect?name=&lt;name&gt;</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Set the active effect by name or by numeric index.</p>
+        <h3 style="margin-top:8px">Valid names</h3>
+        <p class="endpoint-desc">FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS, CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA, RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER, AUDIO_VISUALIZER, HEARTBEAT</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>GET /api/effect?name=AURORA
+GET /api/effect?index=2    # index 2 = Aurora</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- variation -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/api/variation?index=&lt;0-4&gt;</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Set the variation of the current effect.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>GET /api/variation?index=2</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- power -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/api/power?state=&lt;on|off&gt;</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Turn the LEDs on or off.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>GET /api/power?state=off</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- brightness -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/api/brightness?value=&lt;0-255&gt;</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Set the global LED brightness. Applied to every effect and pattern, and saved to NVS so it persists across reboots. <code>0</code> turns the LEDs off, <code>255</code> is maximum. Read the current value from <code>/api/info</code>.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>GET /api/brightness?value=128</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- info -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/api/info</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Returns a JSON object with the current device state.</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>{
+  "effect": "AURORA",
+  "effectIndex": 2,
+  "variation": 2,
+  "variationMax": 4,
+  "power": "on",
+  "numEffects": 15,
+  "ledCount": 50,
+  "brightness": 255,
+  "colorOrder": "GRB"
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- config -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/config?colorOrder=&lt;order&gt;&amp;ledCount=&lt;n&gt;</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Read or set the device configuration. Without parameters it returns the current config as JSON. Parameters apply immediately, are saved to NVS, and persist across reboots. Either or both parameters can be combined in one request.</p>
+        <div class="param-grid">
+          <div class="param-row">
+            <code>colorOrder</code>
+            <span class="opt">optional</span>
+            <span class="muted">RGB, RBG, GRB, GBR, BRG, or BGR (case-insensitive), or the numeric <code>NEO_*</code> value <code>0-5</code> (e.g. <code>5</code> = BGR)</span>
+          </div>
+          <div class="param-row">
+            <code>ledCount</code>
+            <span class="opt">optional</span>
+            <span class="muted">Number of LEDs, <code>1-300</code></span>
+          </div>
+        </div>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>GET /config                              # read current config
+GET /config?colorOrder=BGR               # set color order
+GET /config?ledCount=100                 # set LED count
+GET /config?colorOrder=GRB&ledCount=120  # both at once</pre>
+        </div>
+        <p class="endpoint-desc">Every request to <code>/config</code> returns the full configuration as JSON, so the response doubles as confirmation:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>{
+  "colorOrder": "GRB",
+  "colorOrderValue": 1,
+  "ledCount": 120,
+  "brightness": 255,
+  "effect": "AURORA",
+  "power": "on"
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- pixels/set -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/api/pixels/set?pattern=&lt;p&gt;&amp;color=RRGGBB...</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Set pixel colors with customizable patterns. All parameters are passed as query strings.</p>
+        <div class="param-grid">
+          <div class="param-row">
+            <code>pattern</code>
+            <span class="req">required</span>
+            <span class="muted">Lighting pattern: <code>solid</code>, <code>striped</code>, or <code>gradient</code></span>
+          </div>
+          <div class="param-row">
+            <code>color</code>
+            <span class="req">required*</span>
+            <span class="muted">Hex color code(s) without <code>#</code>. Can be repeated for multiple colors. At least one always required.</span>
+          </div>
+          <div class="param-row">
+            <code>brightness</code>
+            <span class="opt">optional</span>
+            <span class="muted">Sets global brightness <code>0-255</code>, persisted and applied to all effects. Omit to keep the current global brightness.</span>
+          </div>
+        </div>
+        <h3 style="margin-top:8px">Color format</h3>
+        <ul class="checklist">
+          <li>6-digit hex: <code>RRGGBB</code> (e.g. <code>FF0000</code> for red)</li>
+          <li>3-digit shorthand allowed: <code>F00</code> = <code>FF0000</code></li>
+          <li>Case insensitive (<code>ff0000</code> == <code>FF0000</code>)</li>
+          <li>Multiple colors supplied by repeating the <code>color</code> key</li>
+        </ul>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <pre>GET /api/pixels/set?pattern=solid&color=FF0000
+
+GET /api/pixels/set?pattern=striped&color=FF0000&color=00FF00&color=0000FF
+
+GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- help -->
+    <div class="endpoint">
+      <div class="endpoint-head" onclick="toggleEndpoint(this)">
+        <span class="method m-get">GET</span>
+        <span class="path">/help</span>
+        <span class="chev">&#9660;</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Plain-text listing of all available endpoints. Handy when working on a headless device.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EFFECTS ================= -->
+  <section id="effects">
+    <h2><span class="hash">#</span> Effects &amp; Variations</h2>
+    <p class="section-sub">All 15 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Effect</th><th>Variations</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td><code>FIREFLIES</code></td><td>1 / 2 / 3 / 5 / 8 fireflies (speed scales with count)</td></tr>
+          <tr><td>1</td><td><code>RAINBOW_SWIPE</code></td><td>Forward / Reverse / Fast / Slow / Medium+Forward</td></tr>
+          <tr><td>2</td><td><code>AURORA</code></td><td>Blue-green / Warm / Cool violet / Pink-green / Rainbow-tinted</td></tr>
+          <tr><td>3</td><td><code>COMET</code></td><td>Position-hue / Fixed hue / Time-hue / White / Rainbow tail</td></tr>
+          <tr><td>4</td><td><code>CHASING_DOTS</code></td><td>2 / 3 / 4 / 5 / 6 chasers</td></tr>
+          <tr><td>5</td><td><code>CYLON</code></td><td>Hue shift at ends / Hue shift+ / Time-hue / White / Red</td></tr>
+          <tr><td>6</td><td><code>DUAL_COMET</code></td><td>White flash / Rainbow flash / Color-ring flash / Yellow / Red flash</td></tr>
+          <tr><td>7</td><td><code>SPARKLE_SWEEP</code></td><td>Density and width combos (5 variations)</td></tr>
+          <tr><td>8</td><td><code>POLICE</code></td><td>Alternating / Split halves / Three-segment / All flash / Sweeping</td></tr>
+          <tr><td>9</td><td><code>PLASMA</code></td><td>2 / 3 / 4 / 5 / 5 blobs (wider)</td></tr>
+          <tr><td>10</td><td><code>RAINBOW_GRADIENT</code></td><td>Window size 6 / 10 / 14 / 18 / 22</td></tr>
+          <tr><td>11</td><td><code>PULSE_WAVE</code></td><td>Sigma &amp; speed combinations (5 variations)</td></tr>
+          <tr><td>12</td><td><code>SINGLE_RUNNER</code></td><td>Random hue / Rainbow-position / Time-hue / White / Tail trail</td></tr>
+          <tr><td>13</td><td><code>AUDIO_VISUALIZER</code></td><td>Simulated spectrum analyzers with varying band counts &amp; styles</td></tr>
+          <tr><td>14</td><td><code>HEARTBEAT</code></td><td>Mac breathing / Lub-dub center / Alternating side / Travelling / Dual pulse</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">Variations are indexed <code>0-4</code>. The <code>STATIC_PIXEL</code> effect used internally by <code>/api/pixels/set</code> has a single variation and is not listed above.</div>
+  </section>
+
+  <!-- ================= STRUCTURE ================= -->
+  <section id="structure">
+    <h2><span class="hash">#</span> Project Structure</h2>
+    <p class="section-sub">A quick map of the repository.</p>
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>pixels-string/
+├── pixels-string.ino      # Main Arduino sketch (effects, WiFi, HTTP, button)
+├── config.example.h       # WiFi & network config template
+├── config.h               # Your actual config (gitignored)
+├── dashboard.html         # Web dashboard source (HTML/CSS/JS)
+├── dashboard_html.h       # Auto-generated: minified HTML embedded as a C string
+├── html-to-header.js      # Node.js script to minify HTML & generate header
+├── package.json           # Node dependencies (html-minifier)
+├── pixels-string-dashboard-screenshot.jpg
+└── site/                  # Project website
+    ├── index.html         # This page
+    ├── favicon.png        # Browser icon
+    ├── apple-touch-icon.png # iOS home screen icon
+    ├── og-image.png       # Social sharing image
+    └── site.webmanifest   # Web app manifest</pre>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Pixels String &middot; ISC License &middot; <a href="https://github.com/shajanjp/pixels-string" target="_blank" rel="noopener">github.com/shajanjp/pixels-string</a></p>
+</footer>
+
+<script>
+  // Copy code blocks
+  function copyCode(btn) {
+    const pre = btn.nextElementSibling;
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 1600);
+    });
+  }
+
+  // Expandable API endpoint cards
+  function toggleEndpoint(head) {
+    head.parentElement.classList.toggle("open");
+  }
+
+  // Highlight the nav link for the section in view
+  const sections = document.querySelectorAll("section[id]");
+  const navLinks = document.querySelectorAll(".nav-links a");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        navLinks.forEach((link) => {
+          link.classList.toggle("active", link.getAttribute("href") === "#" + entry.target.id);
+        });
+      }
+    });
+  }, { rootMargin: "-40% 0px -55% 0px" });
+  sections.forEach((s) => observer.observe(s));
+</script>
+
+</body>
+</html>

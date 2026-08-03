@@ -1,0 +1,21 @@
+{
+  "name": "Pixels String",
+  "short_name": "Pixels String",
+  "description": "WiFi-enabled ESP32 LED pixel string controller",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d0d13",
+  "theme_color": "#fff44f",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
