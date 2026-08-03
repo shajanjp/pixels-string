@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pixels String - WiFi ESP32 LED Pixel String Controller</title>
-<meta name="description" content="Pixels String is a WiFi-enabled ESP32 LED pixel string controller with 20 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta name="description" content="Pixels String is a WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
 <meta name="robots" content="index, follow">
 <meta name="author" content="Shajan Jacob">
 <meta name="keywords" content="ESP32, NeoPixel, WS2812B, SK6812, LED strip, pixel string, LED controller, Arduino, REST API, web dashboard, WiFi LED, mDNS">
@@ -23,7 +23,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:site_name" content="Pixels String">
 <meta property="og:title" content="Pixels String - WiFi ESP32 LED Pixel String Controller">
-<meta property="og:description" content="A WiFi-enabled ESP32 LED pixel string controller with 20 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta property="og:description" content="A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
 <meta property="og:url" content="https://shajanjacob.com/pixels-string/">
 <meta property="og:image" content="https://shajanjacob.com/pixels-string/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Pixels String - WiFi ESP32 LED Pixel String Controller">
-<meta name="twitter:description" content="A WiFi-enabled ESP32 LED pixel string controller with 20 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta name="twitter:description" content="A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
 <meta name="twitter:image" content="https://shajanjacob.com/pixels-string/og-image.png">
 
 <!-- Structured data (JSON-LD) -->
@@ -46,14 +46,14 @@
       "@id": "https://shajanjacob.com/pixels-string/#website",
       "name": "Pixels String",
       "url": "https://shajanjacob.com/pixels-string/",
-      "description": "A WiFi-enabled ESP32 LED pixel string controller with 20 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.",
+      "description": "A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.",
       "inLanguage": "en"
     },
     {
       "@type": "SoftwareApplication",
       "@id": "https://shajanjacob.com/pixels-string/#software",
       "name": "Pixels String",
-      "description": "WiFi-enabled ESP32 LED pixel string controller with 20 effects, 5 variations per effect, a physical button interface, an embedded web dashboard, and a full REST API.",
+      "description": "WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard, and a full REST API.",
       "url": "https://shajanjacob.com/pixels-string/",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "ESP32 (Arduino / PlatformIO)",
@@ -63,7 +63,7 @@
       "codeRepository": "https://github.com/shajanjp/pixels-string",
       "downloadUrl": "https://github.com/shajanjp/pixels-string",
       "featureList": [
-        "20 LED effects with 5 variations each",
+        "23 LED effects with 5 variations each",
         "Embedded web dashboard",
         "REST API control",
         "Physical button interface",
@@ -458,7 +458,7 @@
 <div class="hero" id="top">
   <span class="hero-badge">WiFi &middot; ESP32 &middot; NeoPixel</span>
   <h1>Pixels String</h1>
-  <p>A WiFi-enabled ESP32 LED pixel string controller with <strong>15 stunning effects</strong>, <strong>5 variations per effect</strong>, a physical button interface, and an embedded web dashboard for browser-based control.</p>
+  <p>A WiFi-enabled ESP32 LED pixel string controller with <strong>23 stunning effects</strong>, <strong>5 variations per effect</strong>, a physical button interface, and an embedded web dashboard for browser-based control.</p>
   <div class="hero-ctas">
     <a class="btn btn-primary" href="#setup">Get Started</a>
     <a class="btn btn-ghost" href="#api">View REST API</a>
@@ -486,7 +486,7 @@
 
     <h3>What's in the box</h3>
     <ul class="checklist">
-      <li>20 built-in LED effects, each with 5 variations (100 total looks)</li>
+      <li>23 built-in LED effects, each with 5 variations (115 total looks)</li>
       <li>Embedded web dashboard with animated per-effect icons and live API feedback</li>
       <li>Physical button: single-click, double-click, and long-press controls</li>
       <li>Full REST API for programmatic control over HTTP</li>
@@ -502,9 +502,9 @@
     <p class="section-sub">Everything the controller does out of the box.</p>
     <div class="grid">
       <div class="card">
-        <div class="icon c-purple">15</div>
-        <h3>15 LED Effects</h3>
-        <p>Fireflies, Rainbow Swipe, Aurora, Comet, Chasing Dots, Cylon, Dual Comet, Sparkle Sweep, Police, Plasma, Rainbow Gradient, Pulse Wave, Single Runner, Audio Visualizer, and Heartbeat.</p>
+        <div class="icon c-purple">23</div>
+        <h3>23 LED Effects</h3>
+        <p>Fireflies, Rainbow Swipe, Aurora, Comet, Chasing Dots, Cylon, Dual Comet, Sparkle Sweep, Police, Plasma, Rainbow Gradient, Pulse Wave, Single Runner, Audio Visualizer, Heartbeat, Twinkle, Fire Flicker, Bouncing Balls, Lightning Storm, Kaleidoscope, Colliding Fill, Paint Splat, and Snake.</p>
       </div>
       <div class="card">
         <div class="icon c-green">5x</div>
@@ -711,7 +711,7 @@ node html-to-header.js</pre>
       <div class="endpoint-body">
         <p class="endpoint-desc">Set the active effect by name or by numeric index.</p>
         <h3 style="margin-top:8px">Valid names</h3>
-        <p class="endpoint-desc">FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS, CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA, RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER, AUDIO_VISUALIZER, HEARTBEAT, TWINKLE, FIRE_FLICKER, BOUNCING_BALLS, LIGHTNING_STORM, KALEIDOSCOPE</p>
+        <p class="endpoint-desc">FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS, CYLON, DUAL_COMET, SPARKLE_SWEEP, POLICE, PLASMA, RAINBOW_GRADIENT, PULSE_WAVE, SINGLE_RUNNER, AUDIO_VISUALIZER, HEARTBEAT, TWINKLE, FIRE_FLICKER, BOUNCING_BALLS, LIGHTNING_STORM, KALEIDOSCOPE, COLLIDING_FILL, PAINT_SPLAT, SNAKE</p>
         <div class="code-block">
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
           <pre>GET /api/effect?name=AURORA
@@ -785,7 +785,7 @@ GET /api/effect?index=2    # index 2 = Aurora</pre>
   "variation": 2,
   "variationMax": 4,
   "power": "on",
-  "numEffects": 15,
+  "numEffects": 24,
   "ledCount": 50,
   "brightness": 255,
   "colorOrder": "GRB"
@@ -897,7 +897,7 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128</p
   <!-- ================= EFFECTS ================= -->
   <section id="effects">
     <h2><span class="hash">#</span> Effects &amp; Variations</h2>
-    <p class="section-sub">All 15 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
+    <p class="section-sub">All 23 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -924,6 +924,9 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128</p
           <tr><td>17</td><td><code>BOUNCING_BALLS</code></td><td>1 slow ball / 2 balls / 3 sized balls / 4 white with trails / 5 rainbow elastic</td></tr>
           <tr><td>18</td><td><code>LIGHTNING_STORM</code></td><td>Full-strip flash / Random segments / Rolling wave / Violet afterglow / Frequent storm</td></tr>
           <tr><td>19</td><td><code>KALEIDOSCOPE</code></td><td>2-fold mirror / 4-fold twinkle / 8-fold plasma / Rotating washes / Laser-show centre</td></tr>
+          <tr><td>20</td><td><code>COLLIDING_FILL</code></td><td>Classic ends-inward / Colour swap / Teleport fill / Random side / Center-out fill</td></tr>
+          <tr><td>21</td><td><code>PAINT_SPLAT</code></td><td>Classic mix / Splash burst / Lava lamp / Rainbow bands / Galactic stars</td></tr>
+          <tr><td>22</td><td><code>SNAKE</code></td><td>Classic green / Speed boost / Rainbow / Obstacle course / Poison food</td></tr>
         </tbody>
       </table>
     </div>
