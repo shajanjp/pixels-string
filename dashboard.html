@@ -151,12 +151,16 @@
             max-width: 1000px;
         }
         @media (max-width: 600px) {
-            .controls { gap: 0.75rem; }
+            .controls {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
             .settings-panel { flex-direction: column; align-items: stretch; max-width: 280px; }
             body { padding: 1rem; }
-            .effect-btn { width: 160px; }
+            .effect-btn { width: 100%; }
             .dots { gap: 6px; }
-            .dot { width: 12px; height: 12px; }
+            .dot { width: 9.6px; height: 9.6px; }
         }
 
         /* Dark button with 7 animated dots */
@@ -165,8 +169,7 @@
             flex-direction: column;
             align-items: center;
             gap: 12px;
-            padding: 18px 16px;
-            width: 230px;
+            padding: 18px 10px;
             background: #16161d;          /* uniform dark button */
             border: 1px solid rgba(255,255,255,0.07);
             border-radius: 18px;
