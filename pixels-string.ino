@@ -213,6 +213,7 @@ void freeStaticPixelBuffer();
 uint32_t parseHexColor(const String& hex);
 uint32_t lerpColor(uint32_t c1, uint32_t c2, float t);
 void applyBrightnessToBuffer(uint8_t brightness);
+void applyPercentageToBuffer(int percentage);
 void generateSolidPattern(const String& colorStr);
 void generateStripedPattern(const String colors[], int numColors);
 void generateGradientPattern(const String colors[], int numColors);
@@ -509,6 +510,34 @@ void handleClient() {
       }
     }
 
+    // Percentage limits the pattern to the first N% of the strip; the
+    // remaining LEDs are turned off. Omit for 100%.
+    String percentageStr = getParam(fullPath, "percentage");
+    int percentage = -1; // -1 = not specified
+    if (percentageStr.length() > 0) {
+      bool isNumeric = true;
+      for (int i = 0; i < percentageStr.length(); i++)
+        if (!isdigit(percentageStr.charAt(i))) { isNumeric = false; break; }
+      if (!isNumeric || percentageStr.length() > 3) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                   "Connection: close\r\n\r\n"
+                   "{\"status\":\"error\",\"message\":\"Invalid percentage value\"}";
+        client.print(response);
+        client.stop();
+        return;
+      }
+      int v = percentageStr.toInt();
+      if (v < 0 || v > 100) {
+        response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\n"
+                   "Connection: close\r\n\r\n"
+                   "{\"status\":\"error\",\"message\":\"Percentage must be between 0 and 100\"}";
+        client.print(response);
+        client.stop();
+        return;
+      }
+      percentage = v;
+    }
+
     // Brightness is unified with the global brightness variable: an explicit
     // value updates the global brightness (persisted, applies to every effect).
     // The buffer stays at full color; strip.setBrightness() scales it at show
@@ -551,6 +580,11 @@ void handleClient() {
       client.print(response);
       client.stop();
       return;
+    }
+
+    // Limit the pattern to the given percentage of the strip (first LEDs).
+    if (percentage >= 0) {
+      applyPercentageToBuffer(percentage);
     }
 
     if (!staticPixelBuffer) {
@@ -608,13 +642,16 @@ void handleClient() {
     helpResponse += "GET /config\n";
     helpResponse += "  Returns the current configuration as JSON (color order, LED count,\n";
     helpResponse += "  brightness, effect, power).\n\n";
-    helpResponse += "GET /api/pixels/set?pattern=<solid|striped|gradient>&color=RRGGBB[&color=...][&brightness=0-255]\n";
+    helpResponse += "GET /api/pixels/set?pattern=<solid|striped|gradient>&color=RRGGBB[&color=...][&brightness=0-255][&percentage=0-100]\n";
     helpResponse += "  Set the entire pixel strip to a static pattern.\n";
     helpResponse += "  pattern: solid (one color), striped (colors alternate), gradient (interpolated).\n";
     helpResponse += "  color: hex color(s), 3 or 6 digits, case insensitive. Repeat for multiple.\n";
     helpResponse += "  brightness: optional, 0-255. When given, sets the global brightness\n";
     helpResponse += "              (persisted, applies to all effects). Omit to keep the\n";
-    helpResponse += "              current global brightness.\n\n";
+    helpResponse += "              current global brightness.\n";
+    helpResponse += "  percentage: optional, 0-100. Applies the pattern to only the first\n";
+    helpResponse += "              N% of LEDs; the remaining LEDs are turned off.\n";
+    helpResponse += "              Omit or use 100 for the whole strip.\n\n";
     helpResponse += "GET /help\n";
     helpResponse += "  This help page.\n\n";
     helpResponse += "All responses are plain text except /api/info and /config (JSON).\n";
@@ -2699,6 +2736,16 @@ void applyBrightnessToBuffer(uint8_t brightness) {
     uint8_t g = (uint8_t)(((c >> 8) & 0xFF) * scale);
     uint8_t b = (uint8_t)((c & 0xFF) * scale);
     staticPixelBuffer[i] = strip.Color(r, g, b);
+  }
+}
+
+void applyPercentageToBuffer(int percentage) {
+  if (!staticPixelBuffer || percentage >= 100) return;
+  int litLeds = (numLeds * percentage) / 100;
+  if (litLeds < 0) litLeds = 0;
+  if (litLeds > numLeds) litLeds = numLeds;
+  for (int i = litLeds; i < numLeds; i++) {
+    staticPixelBuffer[i] = 0; // off
   }
 }
 

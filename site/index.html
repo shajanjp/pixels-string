@@ -841,7 +841,7 @@ GET /config?colorOrder=GRB&ledCount=120  # both at once</pre>
     <div class="endpoint">
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
-        <span class="path">/api/pixels/set?pattern=&lt;p&gt;&amp;color=RRGGBB...</span>
+        <span class="path">/api/pixels/set?pattern=&lt;p&gt;&amp;color=RRGGBB...[&amp;brightness=0-255][&amp;percentage=0-100]</span>
         <span class="chev">&#9660;</span>
       </div>
       <div class="endpoint-body">
@@ -862,6 +862,11 @@ GET /config?colorOrder=GRB&ledCount=120  # both at once</pre>
             <span class="opt">optional</span>
             <span class="muted">Sets global brightness <code>0-255</code>, persisted and applied to all effects. Omit to keep the current global brightness.</span>
           </div>
+          <div class="param-row">
+            <code>percentage</code>
+            <span class="opt">optional</span>
+            <span class="muted">Applies the pattern to only the first <code>N%</code> of LEDs (<code>0-100</code>); the remaining LEDs are turned off. Omit or use <code>100</code> for the whole strip.</span>
+          </div>
         </div>
         <h3 style="margin-top:8px">Color format</h3>
         <ul class="checklist">
@@ -876,7 +881,9 @@ GET /config?colorOrder=GRB&ledCount=120  # both at once</pre>
 
 GET /api/pixels/set?pattern=striped&color=FF0000&color=00FF00&color=0000FF
 
-GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128</pre>
+GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128
+
+GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pre>
         </div>
       </div>
     </div>

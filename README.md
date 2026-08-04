@@ -218,6 +218,7 @@ Set pixel colors with customizable patterns. All parameters are passed as query 
 | `pattern` | **Yes** | Lighting pattern: `solid`, `striped`, or `gradient`. |
 | `color` | **Yes*** | Hex color code(s) without `#`. Can be repeated for multiple colors. |
 | `brightness` | No | Sets the global brightness `0-255`. Persisted and applied to all effects (including this pattern). Omit to keep the current global brightness. |
+| `percentage` | No | Applies the pattern to only the first `N%` of LEDs (`0-100`); the remaining LEDs are turned off. Omit or use `100` for the whole strip. |
 
 *At least one `color` is always required.
 
@@ -235,6 +236,8 @@ GET /api/pixels/set?pattern=solid&color=FF0000
 GET /api/pixels/set?pattern=striped&color=FF0000&color=00FF00&color=0000FF
 
 GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128
+
+GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50
 ```
 
 ## Effects & Variations
