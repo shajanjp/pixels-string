@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#08080c">
     <title>Pixels String - LED Effect Controller</title>
+
+    <!-- Favicon + app icon (same assets as site/index.html, inlined as data URIs
+         because the ESP32 serves this dashboard as a single self-contained file) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23fff44f'/></svg>">
+    <link rel="icon" type="image/png" sizes="64x64" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABwklEQVR4nO1b263DIAxlhIyQETJCN2CFjNARuklGyAgZISNkhPzwz1Uk3yqieUAL2GBbOj+V0vocjOsYo5SYWDazRjfW6Afg5eD/8wbbz2hmje6s0U9r9GSNXq3R1hMrPLM922HzCDJrdAsrugQQvsMC39li8zs1ID5EJH2GgZQQsK9zED8SAjdfWKP7wL0dG9tv9xjEt1UfEYm7GLNFA2T2mQBpF3PyfwwgjxnyPlsijQgFkE8nQkHk44sACY/inr/DHCUxEsv2oRh/Jd8TIPErvqsTIPRL2vdnWL/aCkjlbSoMoeRbAk7Hhv8LVGWrHxYFla6+fxRA4wHb0VR4+QgQs5NDDcsd+Y6Ak6lxXiJDExLbwdR4XgkwEXAwNaYrAWqo/O6wnpFvCDiXC5+lMZzKYDuWCw8R4ECAmgsgF58FkQggAogA7JMgewF4F0KKeyms5GVIXoelIaK4t8RU/QWRV1OUd1tccT8YqTgKwmYLK4uCsMNRJcfjbxH4DkjsROA7IqNkSOotAt8xuQJFYD0tmo68IwLFnJB+WHonAt9xeUcInhcmHBH4XpnZG9tLU66xvTZ3ZCwvTl4Zu6uzYgXYHx3ZjFJwCnNuAAAAAElFTkSuQmCC">
+    <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
+    <meta name="application-name" content="Pixels String">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -22,7 +30,7 @@
         h1 {
             font-size: 1.75rem;
             letter-spacing: 0.05em;
-            background: linear-gradient(135deg, #c084fc, #60a5fa, #34d399);
+            background: linear-gradient(90deg, #ef4444, #f97316, #facc15, #22c55e, #3b82f6, #8b5cf6);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
