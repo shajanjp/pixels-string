@@ -96,9 +96,9 @@ The ESP32 serves a full-featured dashboard at its root URL. Each effect is shown
 
 All endpoints are served on port 80.
 
-### `GET /api/effect?name=<name>`
+### Set Effect by Name
 
-Set the active effect by name.
+`GET /api/effect?name=<name>` - Set the active effect by name.
 
 **Valid names:**
 
@@ -108,41 +108,41 @@ FIREFLIES, RAINBOW_SWIPE, AURORA, COMET, CHASING_DOTS, CYLON, DUAL_COMET, SPARKL
 GET /api/effect?name=AURORA
 ```
 
-### `GET /api/effect?index=<0-23>`
+### Set Effect by Index
 
-Set effect by numeric index.
+`GET /api/effect?index=<0-23>` - Set effect by numeric index.
 
 ```
 GET /api/effect?index=2    → Aurora
 ```
 
-### `GET /api/variation?index=<0-4>`
+### Set Variation
 
-Set the variation of the current effect.
+`GET /api/variation?index=<0-4>` - Set the variation of the current effect.
 
 ```
 GET /api/variation?index=2
 ```
 
-### `GET /api/power?state=<on|off>`
+### Set Power State
 
-Turn LEDs on or off.
+`GET /api/power?state=<on|off>` - Turn LEDs on or off.
 
 ```
 GET /api/power?state=off
 ```
 
-### `GET /api/brightness?value=<0-255>`
+### Set Brightness
 
-Set the global LED brightness. Applied to every effect and pattern, and saved to NVS so it persists across reboots. `0` turns the LEDs off, `255` is maximum. Read the current value from `/api/info`.
+`GET /api/brightness?value=<0-255>` - Set the global LED brightness. Applied to every effect and pattern, and saved to NVS so it persists across reboots. `0` turns the LEDs off, `255` is maximum. Read the current value from `/api/info`.
 
 ```
 GET /api/brightness?value=128
 ```
 
-### `GET /api/info`
+### Get Device State
 
-Returns a JSON object with the current state.
+`GET /api/info` - Returns a JSON object with the current state.
 
 ```json
 {
@@ -158,9 +158,9 @@ Returns a JSON object with the current state.
 }
 ```
 
-### `GET /config`
+### Get Device Configuration
 
-Returns the current device configuration as JSON: color order, LED count, brightness, active effect, and power state.
+`GET /config` - Returns the current device configuration as JSON: color order, LED count, brightness, active effect, and power state.
 
 ```json
 {
@@ -173,17 +173,17 @@ Returns the current device configuration as JSON: color order, LED count, bright
 }
 ```
 
-### `GET /config?colorOrder=<RGB|RBG|GRB|GBR|BRG|BGR>`
+### Set Color Order
 
-Set the NeoPixel color order dynamically. This matches the physical wiring of the strip: some strips are RGB, others are GRB, BRG, BGR, etc. Accepts the color order by name (case-insensitive) or by its numeric `NEO_*` value (`0-5`, e.g. `5` = BGR). Applies immediately to all effects and patterns, is saved to NVS, and persists across reboots.
+`GET /config?colorOrder=<RGB|RBG|GRB|GBR|BRG|BGR>` - Set the NeoPixel color order dynamically. This matches the physical wiring of the strip: some strips are RGB, others are GRB, BRG, BGR, etc. Accepts the color order by name (case-insensitive) or by its numeric `NEO_*` value (`0-5`, e.g. `5` = BGR). Applies immediately to all effects and patterns, is saved to NVS, and persists across reboots.
 
 ```
 GET /config?colorOrder=BGR
 ```
 
-### `GET /config?ledCount=<1-300>`
+### Set LED Count
 
-Set the number of LEDs. Applies immediately, is saved to NVS, and persists across reboots.
+`GET /config?ledCount=<1-300>` - Set the number of LEDs. Applies immediately, is saved to NVS, and persists across reboots.
 
 ```
 GET /config?ledCount=100
@@ -202,13 +202,13 @@ Both parameters can be combined in a single request, e.g. `GET /config?colorOrde
 }
 ```
 
-### `GET /help`
+### List Available Endpoints
 
-Plain-text listing of all available endpoints.
+`GET /help` - Plain-text listing of all available endpoints.
 
-### `GET /api/pixels/set`
+### Set Pixel Colors
 
-Set pixel colors with customizable patterns. All parameters are passed as query strings.
+`GET /api/pixels/set` - Set pixel colors with customizable patterns. All parameters are passed as query strings.
 
 **Query Parameters**
 
