@@ -162,6 +162,31 @@
   }
   .nav-links a:hover { color: var(--text); background: var(--card); }
   .nav-links a.active { color: var(--text); background: var(--card); }
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-toggle span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: var(--text);
+    border-radius: 2px;
+    transition: transform .2s, opacity .2s;
+  }
+  .nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle.open span:nth-child(2) { opacity: 0; }
+  .nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
   /* ---------- Hero ---------- */
   .hero {
@@ -429,11 +454,40 @@
   }
   footer a { color: var(--text-dim); }
   footer a:hover { color: var(--text); }
+  footer .gh-icon { display: inline-flex; vertical-align: middle; }
+  footer .gh-icon svg { width: 18px; height: 18px; fill: currentColor; transition: transform .15s; }
+  footer .gh-link:hover .gh-icon svg { transform: translateY(-2px); }
 
   @media (max-width: 640px) {
     .hero { padding-top: 64px; }
     .param-row { grid-template-columns: 1fr; gap: 4px; }
     nav { height: 54px; }
+
+    /* Mobile nav: hide links, show hamburger toggle */
+    .nav-toggle { display: flex; }
+    nav { position: relative; }
+    .nav-links {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 12px;
+      background: rgba(13, 13, 19, 0.97);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+      overflow: visible;
+    }
+    .nav-links.open { display: flex; }
+    .nav-links a {
+      font-size: 0.95rem;
+      padding: 11px 14px;
+      border-radius: 8px;
+      white-space: normal;
+    }
   }
 </style>
 </head>
@@ -442,7 +496,10 @@
 <header>
   <nav>
     <a class="brand" href="#top"><span class="brand-dot"></span>Pixels String</a>
-    <div class="nav-links">
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="navLinks">
       <a href="#overview">Overview</a>
       <a href="#features">Features</a>
       <a href="#hardware">Hardware</a>
@@ -462,7 +519,6 @@
   <div class="hero-ctas">
     <a class="btn btn-primary" href="#setup">Get Started</a>
     <a class="btn btn-ghost" href="#api">View REST API</a>
-    <a class="btn btn-ghost" href="https://github.com/shajanjp/pixels-string" target="_blank" rel="noopener">GitHub</a>
   </div>
   <div class="hero-features">
     <span class="feature-chip"><span class="ficon c-blue">ESP</span>ESP32 Powered</span>
@@ -483,6 +539,8 @@
     <p>The device hosts its own web dashboard directly from the ESP32, so any browser on your network can control every effect, variation, color, and brightness. A <a href="#hardware">physical button</a> gives you the same control without a browser. A complete <a href="#api">REST API</a> lets you integrate the strip into scripts, home automation, or other projects.</p>
 
     <p>All settings are persisted in NVS (non-volatile storage), so your LED count, color order, brightness, and active effect survive reboots and power loss. WiFi is monitored continuously and reconnects automatically.</p>
+
+    <p style="margin-top: 8px"><a class="btn btn-ghost" href="dashboard.html">Dashboard Preview</a></p>
 
     <h3>What's in the box</h3>
     <ul class="checklist">
@@ -967,7 +1025,7 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
 </main>
 
 <footer>
-  <p>Pixels String &middot; ISC License &middot; <a href="https://github.com/shajanjp/pixels-string" target="_blank" rel="noopener">github.com/shajanjp/pixels-string</a></p>
+  <p>Pixels String &middot; ISC License &middot; <a class="gh-link" href="https://github.com/shajanjp/pixels-string" target="_blank" rel="noopener" aria-label="Pixels String on GitHub"><span class="gh-icon"><svg viewBox="0 0 16 16" role="img" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span></a></p>
 </footer>
 
 <script>
@@ -986,6 +1044,30 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
   function toggleEndpoint(head) {
     head.parentElement.classList.toggle("open");
   }
+
+  // Mobile hamburger menu toggle
+  const navToggle = document.getElementById("navToggle");
+  const navLinksEl = document.getElementById("navLinks");
+  navToggle.addEventListener("click", () => {
+    const open = navLinksEl.classList.toggle("open");
+    navToggle.classList.toggle("open", open);
+    navToggle.setAttribute("aria-expanded", open);
+  });
+  // Close the menu after tapping a link (and on Escape)
+  navLinksEl.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      navLinksEl.classList.remove("open");
+      navToggle.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      navLinksEl.classList.remove("open");
+      navToggle.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+    }
+  });
 
   // Highlight the nav link for the section in view
   const sections = document.querySelectorAll("section[id]");
