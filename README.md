@@ -2,7 +2,7 @@
 
 A WiFi-enabled ESP32 LED pixel string controller with 23 stunning effects, 5 variations per effect, a physical button interface, and an embedded web dashboard for browser-based control.
 
-![Pixels String Dashboard](pixels-string-dashboard-screenshot.jpg)
+![Pixels String Dashboard](site/pixels-string-dashboard-screenshot.jpg)
 
 ## Features
 
@@ -57,8 +57,7 @@ Edit `config.h`:
 #define GATEWAY         IPAddress(192, 168, 1, 1)
 #define SUBNET          IPAddress(255, 255, 255, 0)
 
-#define MDNS_HOSTNAME   "neopixel"
-#define DASHBOARD_URL   "http://shajanjacob.com/pixels-string?ip=192.168.1.55"
+#define MDNS_HOSTNAME   "pixels-string"
 ```
 
 > `config.h` is gitignored - your credentials stay out of version control.
@@ -81,7 +80,7 @@ Open `pixels-string.ino` in the Arduino IDE or VS Code with PlatformIO, select y
 ### 5. Find Your Device
 
 - Check your router's DHCP client list for the static IP you configured
-- Or use mDNS: `http://neopixel.local`
+- Or use mDNS: `http://pixels-string.local`
 
 ## Web Dashboard
 

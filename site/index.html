@@ -587,7 +587,7 @@
       <div class="card">
         <div class="icon c-blue">IP</div>
         <h3>Static IP &amp; mDNS</h3>
-        <p>Configurable static IP with gateway and subnet, plus an mDNS hostname (default <code>neopixel.local</code>) so you never have to hunt for the device.</p>
+        <p>Configurable static IP with gateway and subnet, plus an mDNS hostname (default <code>pixels-string.local</code>) so you never have to hunt for the device.</p>
       </div>
       <div class="card">
         <div class="icon c-green">NVS</div>
@@ -656,8 +656,7 @@ cd pixels-string</pre>
 #define GATEWAY         IPAddress(192, 168, 1, 1)
 #define SUBNET          IPAddress(255, 255, 255, 0)
 
-#define MDNS_HOSTNAME   "neopixel"
-#define DASHBOARD_URL   "http://shajanjacob.com/pixels-string?ip=192.168.1.55"</pre>
+#define MDNS_HOSTNAME   "pixels-string"</pre>
     </div>
     <div class="note"><code>config.h</code> is gitignored, so your credentials never end up in version control.</div>
 
@@ -680,7 +679,7 @@ node html-to-header.js</pre>
     <h3>5. Find your device</h3>
     <ul class="checklist">
       <li>Check your router's DHCP client list for the static IP you configured</li>
-      <li>Or use mDNS: <code>http://neopixel.local</code></li>
+      <li>Or use mDNS: <code>http://pixels-string.local</code></li>
     </ul>
   </section>
 
@@ -701,8 +700,7 @@ node html-to-header.js</pre>
           <tr><td><code>STATIC_IP</code></td><td><code>192.168.1.55</code></td><td>Static IP assigned to the device</td></tr>
           <tr><td><code>GATEWAY</code></td><td><code>192.168.1.1</code></td><td>Network gateway</td></tr>
           <tr><td><code>SUBNET</code></td><td><code>255.255.255.0</code></td><td>Network subnet mask</td></tr>
-          <tr><td><code>MDNS_HOSTNAME</code></td><td><code>"neopixel"</code></td><td>mDNS name, resolves to <code>neopixel.local</code></td></tr>
-          <tr><td><code>DASHBOARD_URL</code></td><td>hosted page</td><td>URL the device redirects to for the web dashboard</td></tr>
+          <tr><td><code>MDNS_HOSTNAME</code></td><td><code>"neopixel"</code></td><td>mDNS name, resolves to <code>pixels-string.local</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -730,7 +728,7 @@ node html-to-header.js</pre>
     <p class="section-sub">Control the strip two ways: the web dashboard or the physical button.</p>
 
     <h3>Web dashboard</h3>
-    <p>Open the device's root URL (<code>http://neopixel.local</code> or your static IP) in any browser. The ESP32 serves a full-featured dashboard where every effect is a card with an animated icon:</p>
+    <p>Open the device's root URL (<code>http://pixels-string.local</code> or your static IP) in any browser. The ESP32 serves a full-featured dashboard where every effect is a card with an animated icon:</p>
     <ul class="checklist">
       <li><strong>Click a card</strong> to activate that effect</li>
       <li><strong>Click the same card again</strong> to cycle through its 5 variations - a toast notification shows the variation number</li>

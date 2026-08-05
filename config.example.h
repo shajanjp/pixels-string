@@ -17,10 +17,8 @@
 #define SUBNET          IPAddress(255, 255, 255, 0)
 
 // --- mDNS ---
-#define MDNS_HOSTNAME   "neopixel"
+#define MDNS_HOSTNAME   "pixels-string"
 
-// --- Dashboard ---
-// URL the device redirects to for the web dashboard.
-#define DASHBOARD_URL   "http://shajanjacob.com/pixels-string?ip=192.168.1.55"
+
 
 #endif // CONFIG_H
