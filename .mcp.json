@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pixels-string": {
+      "url": "http://192.168.1.55/mcp",
+      "auth": false
+    }
+  }
+}

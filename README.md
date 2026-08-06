@@ -239,6 +239,41 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&brightness=128
 GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50
 ```
 
+## MCP (Model Context Protocol)
+
+The device speaks the Model Context Protocol over HTTP (`POST /mcp`, JSON-RPC 2.0), so AI assistants (Claude Desktop, MCP Inspector, etc.) can control the LEDs directly. Register it as a remote MCP server with the device URL:
+
+```json
+{
+  "mcpServers": {
+    "pixels-string": {
+      "url": "http://192.168.1.55/mcp"
+    }
+  }
+}
+```
+
+Two tools are exposed, both backed by the existing effect/pattern/brightness code:
+
+### `apply_animation`
+
+Switch the strip to a built-in animation by name (case-insensitive, same names as `/api/effect`).
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | **Yes** | Animation name, e.g. `FIREFLIES`, `AURORA`, `SNAKE` |
+
+### `set_color`
+
+Light the strip in a custom solid color at the given brightness (reuses the solid-pattern + global brightness pipeline).
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `color` | string | **Yes** | Hex color, 3 or 6 digits, case-insensitive (`FF0000` or `f00`) |
+| `brightness` | integer | No | `0-255`; keeps the current brightness when omitted. Persisted to NVS like `/api/brightness`. |
+
+No session or SSE stream is required: each request is answered with a JSON-RPC response and the connection closes, so the endpoint works with any MCP client that supports HTTP servers.
+
 ## Effects & Variations
 
 | # | Effect | Variations |
