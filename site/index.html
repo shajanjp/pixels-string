@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pixels String - WiFi ESP32 LED Pixel String Controller</title>
-<meta name="description" content="Pixels String is a WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta name="description" content="Pixels String is a WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard with full REST API control, and native MCP support for AI assistants.">
 <meta name="robots" content="index, follow">
 <meta name="author" content="Shajan Jacob">
-<meta name="keywords" content="ESP32, NeoPixel, WS2812B, SK6812, LED strip, pixel string, LED controller, Arduino, REST API, web dashboard, WiFi LED, mDNS">
+<meta name="keywords" content="ESP32, NeoPixel, WS2812B, SK6812, LED strip, pixel string, LED controller, Arduino, REST API, web dashboard, WiFi LED, mDNS, MCP, Model Context Protocol, AI assistant">
 <link rel="canonical" href="https://shajanjacob.com/pixels-string/">
 
 <!-- Favicon -->
@@ -23,7 +23,7 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:site_name" content="Pixels String">
 <meta property="og:title" content="Pixels String - WiFi ESP32 LED Pixel String Controller">
-<meta property="og:description" content="A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta property="og:description" content="A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard with full REST API control, and native MCP support for AI assistants.">
 <meta property="og:url" content="https://shajanjacob.com/pixels-string/">
 <meta property="og:image" content="https://shajanjacob.com/pixels-string/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Pixels String - WiFi ESP32 LED Pixel String Controller">
-<meta name="twitter:description" content="A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.">
+<meta name="twitter:description" content="A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard with full REST API control, and native MCP support for AI assistants.">
 <meta name="twitter:image" content="https://shajanjacob.com/pixels-string/og-image.png">
 
 <!-- Structured data (JSON-LD) -->
@@ -46,14 +46,14 @@
       "@id": "https://shajanjacob.com/pixels-string/#website",
       "name": "Pixels String",
       "url": "https://shajanjacob.com/pixels-string/",
-      "description": "A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, and an embedded web dashboard with full REST API control.",
+      "description": "A WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard with full REST API control, and native MCP support for AI assistants.",
       "inLanguage": "en"
     },
     {
       "@type": "SoftwareApplication",
       "@id": "https://shajanjacob.com/pixels-string/#software",
       "name": "Pixels String",
-      "description": "WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard, and a full REST API.",
+      "description": "WiFi-enabled ESP32 LED pixel string controller with 23 effects, 5 variations per effect, a physical button interface, an embedded web dashboard, a full REST API, and native MCP support for AI assistants.",
       "url": "https://shajanjacob.com/pixels-string/",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "ESP32 (Arduino / PlatformIO)",
@@ -66,6 +66,7 @@
         "23 LED effects with 5 variations each",
         "Embedded web dashboard",
         "REST API control",
+        "MCP server for AI assistants (apply_animation, set_color)",
         "Physical button interface",
         "WiFi with static IP and mDNS",
         "Persistent settings in NVS"
@@ -330,6 +331,7 @@
   .c-purple { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
   .c-red { background: linear-gradient(135deg, #b91c1c, #ef4444); }
   .c-amber { background: linear-gradient(135deg, #b45309, #f59e0b); }
+  .c-cyan { background: linear-gradient(135deg, #0e7490, #22d3ee); }
 
   /* ---------- Tables ---------- */
   .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
@@ -507,6 +509,7 @@
       <a href="#configuration">Configuration</a>
       <a href="#usage">Usage</a>
       <a href="#api">REST API</a>
+      <a href="#mcp">MCP</a>
       <a href="#effects">Effects</a>
     </div>
   </nav>
@@ -515,7 +518,7 @@
 <div class="hero" id="top">
   <span class="hero-badge">WiFi &middot; ESP32 &middot; NeoPixel</span>
   <h1>Pixels String</h1>
-  <p>A WiFi-enabled ESP32 LED pixel string controller with <strong>23 stunning effects</strong>, <strong>5 variations per effect</strong>, a physical button interface, and an embedded web dashboard for browser-based control.</p>
+  <p>A WiFi-enabled ESP32 LED pixel string controller with <strong>23 stunning effects</strong>, <strong>5 variations per effect</strong>, a physical button interface, an embedded web dashboard for browser-based control, and native <strong>MCP support</strong> for AI assistants.</p>
   <div class="hero-ctas">
     <a class="btn btn-primary" href="#setup">Get Started</a>
     <a class="btn btn-ghost" href="#api">View REST API</a>
@@ -523,6 +526,7 @@
   <div class="hero-features">
     <span class="feature-chip"><span class="ficon c-blue">ESP</span>ESP32 Powered</span>
     <span class="feature-chip"><span class="ficon c-green">API</span>REST API</span>
+    <span class="feature-chip"><span class="ficon c-cyan">MCP</span>AI Assistant Ready</span>
     <span class="feature-chip"><span class="ficon c-purple">DASH</span>Built-in Dashboard</span>
     <span class="feature-chip"><span class="ficon c-amber">NVS</span>Persistence</span>
     <span class="feature-chip"><span class="ficon c-red">WiFi</span>WiFi + mDNS</span>
@@ -548,6 +552,7 @@
       <li>Embedded web dashboard with animated per-effect icons and live API feedback</li>
       <li>Physical button: single-click, double-click, and long-press controls</li>
       <li>Full REST API for programmatic control over HTTP</li>
+      <li>MCP server (JSON-RPC 2.0) so AI assistants can run animations and set colors</li>
       <li>Static IP and mDNS hostname for reliable, predictable addressing</li>
       <li>Persistent LED count, color order, and brightness via NVS</li>
       <li>WiFi auto-reconnect with 10-second retry loop</li>
@@ -583,6 +588,11 @@
         <div class="icon c-red">API</div>
         <h3>REST API</h3>
         <p>9 HTTP endpoints for effects, variations, power, brightness, pixel patterns, and configuration. JSON responses make scripting and automation trivial.</p>
+      </div>
+      <div class="card">
+        <div class="icon c-cyan">MCP</div>
+        <h3>MCP for AI Assistants</h3>
+        <p>Speaks the Model Context Protocol over HTTP (<code>POST /mcp</code>, JSON-RPC 2.0), so Claude Desktop, MCP Inspector, and other assistants can run animations and set colors directly.</p>
       </div>
       <div class="card">
         <div class="icon c-blue">IP</div>
@@ -625,7 +635,7 @@
         </tbody>
       </table>
     </div>
-    <div class="note warn">The software limit is <code>MAX_LEDS = 300</code> in <code>pixels-string.ino</code>. Adjust it if your hardware supports fewer or more, within ESP32 memory constraints.</div>
+    <div class="note warn">The software limit is <code>MAX_LEDS = 300</code> in <code>globals.h</code>. Adjust it if your hardware supports fewer or more, within ESP32 memory constraints.</div>
   </section>
 
   <!-- ================= SETUP ================= -->
@@ -957,6 +967,66 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
     </div>
   </section>
 
+  <!-- ================= MCP ================= -->
+  <section id="mcp">
+    <h2><span class="hash">#</span> MCP (Model Context Protocol)</h2>
+    <p class="section-sub">The device speaks the Model Context Protocol over HTTP, so AI assistants can control the LEDs directly.</p>
+
+    <p>The ESP32 hosts a minimal MCP server at <code>POST /mcp</code> (JSON-RPC 2.0). Register it as a remote MCP server in any MCP client - Claude Desktop, MCP Inspector, and others - using the device URL:</p>
+
+    <div class="code-block">
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <pre>{
+  "mcpServers": {
+    "pixels-string": {
+      "url": "http://192.168.1.55/mcp"
+    }
+  }
+}</pre>
+    </div>
+
+    <h3>Exposed tools</h3>
+    <p>Two tools are exposed, both backed by the existing effect, pattern, and brightness code:</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tool</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>apply_animation</code></td><td>Switch the strip to a built-in animation by name (case-insensitive, same names as <code>/api/effect</code>)</td></tr>
+          <tr><td><code>set_color</code></td><td>Light the strip in a custom solid color at a given brightness (reuses the solid-pattern + global brightness pipeline)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>apply_animation</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>string</td><td>Yes</td><td>Animation name, e.g. <code>FIREFLIES</code>, <code>AURORA</code>, <code>SNAKE</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>set_color</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Argument</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>color</code></td><td>string</td><td>Yes</td><td>Hex color, 3 or 6 digits, case-insensitive (<code>FF0000</code> or <code>f00</code>)</td></tr>
+          <tr><td><code>brightness</code></td><td>integer</td><td>No</td><td><code>0-255</code>; keeps the current brightness when omitted. Persisted to NVS like <code>/api/brightness</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">No session or SSE stream is required: each request is answered with a JSON-RPC response and the connection closes, so the endpoint works with any MCP client that supports HTTP servers.</div>
+  </section>
+
   <!-- ================= EFFECTS ================= -->
   <section id="effects">
     <h2><span class="hash">#</span> Effects &amp; Variations</h2>
@@ -1003,7 +1073,11 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
     <div class="code-block">
       <button class="copy-btn" onclick="copyCode(this)">Copy</button>
       <pre>pixels-string/
-├── pixels-string.ino      # Main Arduino sketch (effects, WiFi, HTTP, button)
+├── pixels-string.ino      # Main sketch: globals, utilities, button, WiFi, setup/loop
+├── globals.h              # Shared declarations: Effect enum, externs, prototypes
+├── effects.h              # LED animations, static pixel patterns, effect lifecycle
+├── mcp.h                  # Minimal MCP server (JSON-RPC 2.0 at POST /mcp)
+├── rest_api.h             # REST endpoints for the web dashboard (/api/*, /config, /help)
 ├── config.example.h       # WiFi & network config template
 ├── config.h               # Your actual config (gitignored)
 ├── dashboard.html         # Web dashboard source (HTML/CSS/JS)
@@ -1012,11 +1086,12 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
 ├── package.json           # Node dependencies (html-minifier)
 ├── pixels-string-dashboard-screenshot.jpg
 └── site/                  # Project website
-    ├── index.html         # This page
+    ├── index.html         # Landing page
     ├── favicon.png        # Browser icon
     ├── apple-touch-icon.png # iOS home screen icon
     ├── og-image.png       # Social sharing image
     └── site.webmanifest   # Web app manifest</pre>
+    <div class="note">All sketch files are compiled as a single translation unit: <code>pixels-string.ino</code> includes the module headers and defines the shared globals they reference via <code>globals.h</code>.</div>
     </div>
   </section>
 
