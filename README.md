@@ -314,7 +314,11 @@ No session or SSE stream is required: each request is answered with a JSON-RPC r
 
 ```
 pixels-string/
-├── pixels-string.ino      # Main Arduino sketch (effects, WiFi, HTTP, button)
+├── pixels-string.ino      # Main sketch: globals, utilities, button, WiFi, setup/loop
+├── globals.h              # Shared declarations: Effect enum, externs, prototypes
+├── effects.h              # LED animations, static pixel patterns, effect lifecycle
+├── mcp.h                  # Minimal MCP server (JSON-RPC 2.0 at POST /mcp)
+├── rest_api.h             # REST endpoints for the web dashboard (/api/*, /config, /help)
 ├── config.example.h       # WiFi & network config template
 ├── config.h               # Your actual config (gitignored)
 ├── dashboard.html         # Web dashboard source (HTML/CSS/JS)
@@ -330,9 +334,14 @@ pixels-string/
     └── site.webmanifest   # Web app manifest
 ```
 
+All sketch files are compiled as a single translation unit: `pixels-string.ino`
+includes the module headers and defines the shared globals they reference via
+`globals.h`.
+
 ## Maximum LEDs
 
-The software limit is 300 LEDs (`MAX_LEDS`). Adjust this in `pixels-string.ino` if your hardware supports fewer or more (within ESP32 memory constraints).
+The software limit is 300 LEDs (`MAX_LEDS`). Adjust this in `globals.h` if your
+hardware supports fewer or more (within ESP32 memory constraints).
 
 ## License
 
