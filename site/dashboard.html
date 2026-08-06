@@ -233,6 +233,11 @@
             text-align: center;
             word-break: break-word;
         }
+        .btn-label.is-variation {
+            color: #fff;
+            font-size: 0.82rem;
+            letter-spacing: 0.14em;
+        }
 
         /* Custom button + modal */
         .custom-button {
@@ -1232,6 +1237,32 @@
         //  CLICK HANDLER - send effect / variation to the ESP32
         // ==============================================================
         const variations = new Map(); // button -> current variation index
+
+        // Temporarily replace the button's label with the variation number so
+        // the user can see which variation is playing.
+        function showVariation(btn, index) {
+            const label = btn.querySelector('.btn-label');
+            clearTimeout(btn._variationTimer);
+            btn._originalLabel = btn._originalLabel || label.textContent;
+            label.textContent = `Variation ${index}`;
+            label.classList.add('is-variation');
+            btn._variationTimer = setTimeout(() => {
+                label.textContent = btn._originalLabel;
+                label.classList.remove('is-variation');
+                btn._variationTimer = null;
+            }, 1000);
+        }
+
+        // Restore the label early (e.g. when switching to a different effect).
+        function hideVariation(btn) {
+            if (!btn || !btn._variationTimer) return;
+            clearTimeout(btn._variationTimer);
+            btn._variationTimer = null;
+            const label = btn.querySelector('.btn-label');
+            label.textContent = btn._originalLabel;
+            label.classList.remove('is-variation');
+        }
+
         document.querySelectorAll('.effect-btn').forEach(btn => {
             variations.set(btn, 0);
             btn.addEventListener('click', async () => {
@@ -1239,15 +1270,18 @@
                 const name = btn.id;
                 let apiIndex = 0;
                 if (lastClicked !== btn) {
+                    hideVariation(lastClicked);
                     document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active-selected'));
                     btn.classList.add('active-selected');
                     variations.set(btn, 0);
                     lastClicked = btn;
+                    showVariation(btn, 0);
                 } else {
                     apiIndex = variations.get(btn);
                     const next = (apiIndex + 1) % 5;
                     variations.set(btn, next);
                     apiIndex = next;
+                    showVariation(btn, apiIndex);
                 }
                 const url = apiIndex === 0
                     ? `/api/effect?name=${name}`
