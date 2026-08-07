@@ -114,6 +114,35 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* ---------- Ambient background ---------- */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(40% 35% at 15% 0%, rgba(139, 92, 246, 0.12), transparent 60%),
+      radial-gradient(38% 32% at 85% 8%, rgba(52, 211, 153, 0.10), transparent 60%),
+      radial-gradient(30% 28% at 50% 100%, rgba(96, 165, 250, 0.08), transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ---------- Scroll reveal ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .6s cubic-bezier(.22,.61,.36,1), transform .6s cubic-bezier(.22,.61,.36,1);
+    transition-delay: var(--delay, 0s);
+  }
+  .reveal.in-view { opacity: 1; transform: none; }
+
+  /* ---------- Reduced motion ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .hero h1, .led-divider span { animation: none !important; }
+  }
+
   /* ---------- Header / Nav ---------- */
   header {
     position: sticky;
@@ -122,6 +151,11 @@
     background: rgba(13, 13, 19, 0.85);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
+    transition: box-shadow .3s, background .3s;
+  }
+  header.scrolled {
+    background: rgba(13, 13, 19, 0.92);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
   }
   nav {
     max-width: var(--maxw);
@@ -216,10 +250,17 @@
     letter-spacing: -0.02em;
     line-height: 1.15;
     margin-bottom: 18px;
-    background: linear-gradient(120deg, #a78bfa, #60a5fa, #34d399);
+    background: linear-gradient(120deg, #a78bfa, #60a5fa, #34d399, #a78bfa);
+    background-size: 220% 220%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    animation: gradientFlow 8s ease-in-out infinite;
+  }
+  @keyframes gradientFlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
   .hero p {
     max-width: 640px;
@@ -239,7 +280,15 @@
     text-decoration: none;
     transition: transform .15s, box-shadow .15s, background .15s;
   }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent-3);
+    outline-offset: 2px;
+  }
   .btn:hover { transform: translateY(-2px); }
+  .btn-primary:hover { box-shadow: 0 10px 32px rgba(139, 92, 246, 0.5); }
+  .btn:active { transform: translateY(0) scale(.98); }
+  .nav-links a:focus-visible, .feature-chip:focus-visible { outline: 2px solid var(--accent-3); outline-offset: 2px; }
+  .feature-chip { cursor: default; }
   .btn-primary {
     background: linear-gradient(135deg, var(--accent), #6d4fd8);
     color: #fff;
@@ -285,6 +334,32 @@
     color: #fff;
   }
 
+  /* ---------- Animated LED divider ---------- */
+  .led-divider {
+    display: flex;
+    justify-content: center;
+    gap: 9px;
+    margin: 40px auto 0;
+    width: fit-content;
+    padding: 10px 16px;
+    background: rgba(13, 13, 19, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .led-divider span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    animation: ledPulse 2.4s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
+  }
+  @keyframes ledPulse {
+    0%, 100% { opacity: .35; transform: scale(.8); }
+    50% { opacity: 1; transform: scale(1.15); }
+  }
+
   /* ---------- Layout ---------- */
   main { max-width: var(--maxw); margin: 0 auto; padding: 0 24px 80px; }
   section { padding: 56px 0; border-bottom: 1px solid var(--border); }
@@ -294,8 +369,13 @@
     font-weight: 800;
     letter-spacing: -0.01em;
     margin-bottom: 10px;
+    background: linear-gradient(120deg, var(--text), var(--accent-3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    width: fit-content;
   }
-  h2 .hash { color: var(--accent); }
+  h2 .hash { color: var(--accent); -webkit-text-fill-color: var(--accent); }
   .section-sub { color: var(--text-dim); max-width: 720px; margin-bottom: 32px; }
   h3 { font-size: 1.1rem; margin: 28px 0 12px; }
   p { margin-bottom: 14px; }
@@ -313,9 +393,9 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 22px;
-    transition: border-color .15s, transform .15s, background .15s;
+    transition: border-color .15s, transform .15s, background .15s, box-shadow .15s;
   }
-  .card:hover { border-color: #3a3a4e; transform: translateY(-3px); background: var(--card-hover); }
+  .card:hover { border-color: #3a3a4e; transform: translateY(-3px); background: var(--card-hover); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35); }
   .card h3 { margin: 0 0 10px; font-size: 1.02rem; }
   .card p { margin: 0; font-size: 0.92rem; color: var(--text-dim); }
   .card .icon {
@@ -460,6 +540,32 @@
   footer .gh-icon svg { width: 18px; height: 18px; fill: currentColor; transition: transform .15s; }
   footer .gh-link:hover .gh-icon svg { transform: translateY(-2px); }
 
+  /* ---------- Scroll-to-top ---------- */
+  #toTop {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 60;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: opacity .25s, transform .25s, background .2s, border-color .2s, box-shadow .2s;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  #toTop.show { opacity: 1; pointer-events: auto; transform: none; }
+  #toTop:hover { background: var(--card-hover); border-color: #3a3a4e; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.35); }
+  #toTop:focus-visible { outline: 2px solid var(--accent-3); outline-offset: 2px; }
+
   @media (max-width: 640px) {
     .hero { padding-top: 64px; }
     .param-row { grid-template-columns: 1fr; gap: 4px; }
@@ -531,14 +637,25 @@
     <span class="feature-chip"><span class="ficon c-amber">NVS</span>Persistence</span>
     <span class="feature-chip"><span class="ficon c-red">WiFi</span>WiFi + mDNS</span>
   </div>
+  <div class="led-divider" aria-hidden="true">
+    <span style="--d:0s;background:#f43f5e"></span>
+    <span style="--d:.15s;background:#fb923c"></span>
+    <span style="--d:.3s;background:#facc15"></span>
+    <span style="--d:.45s;background:#4ade80"></span>
+    <span style="--d:.6s;background:#22d3ee"></span>
+    <span style="--d:.75s;background:#60a5fa"></span>
+    <span style="--d:.9s;background:#a78bfa"></span>
+    <span style="--d:1.05s;background:#f472b6"></span>
+    <span style="--d:1.2s;background:#facc15"></span>
+  </div>
 </div>
 
 <main>
 
   <!-- ================= OVERVIEW ================= -->
   <section id="overview">
-    <h2><span class="hash">#</span> Overview</h2>
-    <p class="section-sub">Pixels String turns an ESP32 dev board and a NeoPixel-compatible LED strip into a self-contained ambient lighting system. It runs fully on-device, with no cloud services or phone apps required.</p>
+    <h2 class="reveal"><span class="hash">#</span> Overview</h2>
+    <p class="section-sub reveal" style="--delay:.1s">Pixels String turns an ESP32 dev board and a NeoPixel-compatible LED strip into a self-contained ambient lighting system. It runs fully on-device, with no cloud services or phone apps required.</p>
 
     <p>The device hosts its own web dashboard directly from the ESP32, so any browser on your network can control every effect, variation, color, and brightness. A <a href="#hardware">physical button</a> gives you the same control without a browser. A complete <a href="#api">REST API</a> lets you integrate the strip into scripts, home automation, or other projects.</p>
 
@@ -561,50 +678,50 @@
 
   <!-- ================= FEATURES ================= -->
   <section id="features">
-    <h2><span class="hash">#</span> Features</h2>
-    <p class="section-sub">Everything the controller does out of the box.</p>
+    <h2 class="reveal"><span class="hash">#</span> Features</h2>
+    <p class="section-sub reveal" style="--delay:.1s">Everything the controller does out of the box.</p>
     <div class="grid">
-      <div class="card">
+      <div class="card reveal" style="--delay:.05s">
         <div class="icon c-purple">23</div>
         <h3>23 LED Effects</h3>
         <p>Fireflies, Rainbow Swipe, Aurora, Comet, Chasing Dots, Cylon, Dual Comet, Sparkle Sweep, Police, Plasma, Rainbow Gradient, Pulse Wave, Single Runner, Audio Visualizer, Heartbeat, Twinkle, Fire Flicker, Bouncing Balls, Lightning Storm, Kaleidoscope, Colliding Fill, Paint Splat, and Snake.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.1s">
         <div class="icon c-green">5x</div>
         <h3>5 Variations Per Effect</h3>
         <p>Every effect ships with 5 distinct variations. Tap the same button (or click the same card) to cycle through them, from firefly counts to color palettes to speeds.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.15s">
         <div class="icon c-blue">WWW</div>
         <h3>Web Dashboard</h3>
         <p>A full HTML/CSS/JS dashboard is served straight from the ESP32. Animated icons, glowing active-effect highlight, toast notifications, and instant API feedback.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.2s">
         <div class="icon c-amber">BTN</div>
         <h3>Physical Button</h3>
         <p>Single-click cycles effects, double-click cycles variations, and a 2-second long-press toggles power. Debounced with internal pull-up on GPIO 9.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.25s">
         <div class="icon c-red">API</div>
         <h3>REST API</h3>
         <p>9 HTTP endpoints for effects, variations, power, brightness, pixel patterns, and configuration. JSON responses make scripting and automation trivial.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.3s">
         <div class="icon c-cyan">MCP</div>
         <h3>MCP for AI Assistants</h3>
         <p>Speaks the Model Context Protocol over HTTP (<code>POST /mcp</code>, JSON-RPC 2.0), so Claude Desktop, MCP Inspector, and other assistants can run animations and set colors directly.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.35s">
         <div class="icon c-blue">IP</div>
         <h3>Static IP &amp; mDNS</h3>
         <p>Configurable static IP with gateway and subnet, plus an mDNS hostname (default <code>pixels-string.local</code>) so you never have to hunt for the device.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.4s">
         <div class="icon c-green">NVS</div>
         <h3>Persistent Settings</h3>
         <p>LED count, color order, and brightness are stored in NVS and survive reboots. The active effect and power state persist in memory during a session.</p>
       </div>
-      <div class="card">
+      <div class="card reveal" style="--delay:.45s">
         <div class="icon c-red">WIFI</div>
         <h3>Auto-Reconnect</h3>
         <p>WiFi is monitored continuously and reconnects automatically with a 10-second retry loop, keeping the dashboard and API reachable.</p>
@@ -614,8 +731,8 @@
 
   <!-- ================= HARDWARE ================= -->
   <section id="hardware">
-    <h2><span class="hash">#</span> Hardware Requirements</h2>
-    <p class="section-sub">You need an ESP32, an LED strip, and a power supply. Everything else is optional.</p>
+    <h2 class="reveal"><span class="hash">#</span> Hardware Requirements</h2>
+    <p class="section-sub reveal" style="--delay:.1s">You need an ESP32, an LED strip, and a power supply. Everything else is optional.</p>
     <ul class="checklist">
       <li>ESP32 development board</li>
       <li>NeoPixel-compatible LED strip (WS2812B, SK6812, etc.)</li>
@@ -640,8 +757,8 @@
 
   <!-- ================= SETUP ================= -->
   <section id="setup">
-    <h2><span class="hash">#</span> Getting Started</h2>
-    <p class="section-sub">From a fresh clone to a glowing strip in five steps.</p>
+    <h2 class="reveal"><span class="hash">#</span> Getting Started</h2>
+    <p class="section-sub reveal" style="--delay:.1s">From a fresh clone to a glowing strip in five steps.</p>
 
     <h3>1. Clone and configure</h3>
     <div class="code-block">
@@ -695,8 +812,8 @@ node html-to-header.js</pre>
 
   <!-- ================= CONFIGURATION ================= -->
   <section id="configuration">
-    <h2><span class="hash">#</span> Configuration</h2>
-    <p class="section-sub">What lives in config.h and what can be changed at runtime.</p>
+    <h2 class="reveal"><span class="hash">#</span> Configuration</h2>
+    <p class="section-sub reveal" style="--delay:.1s">What lives in config.h and what can be changed at runtime.</p>
 
     <h3>Network settings (config.h)</h3>
     <div class="table-wrap">
@@ -734,8 +851,8 @@ node html-to-header.js</pre>
 
   <!-- ================= USAGE ================= -->
   <section id="usage">
-    <h2><span class="hash">#</span> Using the Device</h2>
-    <p class="section-sub">Control the strip two ways: the web dashboard or the physical button.</p>
+    <h2 class="reveal"><span class="hash">#</span> Using the Device</h2>
+    <p class="section-sub reveal" style="--delay:.1s">Control the strip two ways: the web dashboard or the physical button.</p>
 
     <h3>Web dashboard</h3>
     <p>Open the device's root URL (<code>http://pixels-string.local</code> or your static IP) in any browser. The ESP32 serves a full-featured dashboard where every effect is a card with an animated icon:</p>
@@ -763,8 +880,8 @@ node html-to-header.js</pre>
 
   <!-- ================= REST API ================= -->
   <section id="api">
-    <h2><span class="hash">#</span> REST API</h2>
-    <p class="section-sub">All endpoints are served on port 80 and accept plain <code>GET</code> requests with query parameters. JSON endpoints return readable, unescaped JSON for easy parsing.</p>
+    <h2 class="reveal"><span class="hash">#</span> REST API</h2>
+    <p class="section-sub reveal" style="--delay:.1s">All endpoints are served on port 80 and accept plain <code>GET</code> requests with query parameters. JSON endpoints return readable, unescaped JSON for easy parsing.</p>
     <div class="note">Tip: run <code>GET /help</code> on the device for a plain-text listing of every available endpoint.</div>
 
     <!-- effect -->
@@ -969,8 +1086,8 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
 
   <!-- ================= MCP ================= -->
   <section id="mcp">
-    <h2><span class="hash">#</span> MCP (Model Context Protocol)</h2>
-    <p class="section-sub">The device speaks the Model Context Protocol over HTTP, so AI assistants can control the LEDs directly.</p>
+    <h2 class="reveal"><span class="hash">#</span> MCP (Model Context Protocol)</h2>
+    <p class="section-sub reveal" style="--delay:.1s">The device speaks the Model Context Protocol over HTTP, so AI assistants can control the LEDs directly.</p>
 
     <p>The ESP32 hosts a minimal MCP server at <code>POST /mcp</code> (JSON-RPC 2.0). Register it as a remote MCP server in any MCP client - Claude Desktop, MCP Inspector, and others - using the device URL:</p>
 
@@ -1027,10 +1144,11 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
     <div class="note">No session or SSE stream is required: each request is answered with a JSON-RPC response and the connection closes, so the endpoint works with any MCP client that supports HTTP servers.</div>
   </section>
 
+  
   <!-- ================= EFFECTS ================= -->
   <section id="effects">
-    <h2><span class="hash">#</span> Effects &amp; Variations</h2>
-    <p class="section-sub">All 23 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
+    <h2 class="reveal"><span class="hash">#</span> Effects &amp; Variations</h2>
+    <p class="section-sub reveal" style="--delay:.1s">All 23 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -1068,8 +1186,8 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
 
   <!-- ================= STRUCTURE ================= -->
   <section id="structure">
-    <h2><span class="hash">#</span> Project Structure</h2>
-    <p class="section-sub">A quick map of the repository.</p>
+    <h2 class="reveal"><span class="hash">#</span> Project Structure</h2>
+    <p class="section-sub reveal" style="--delay:.1s">A quick map of the repository.</p>
     <div class="code-block">
       <button class="copy-btn" onclick="copyCode(this)">Copy</button>
       <pre>pixels-string/
@@ -1096,6 +1214,9 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
   </section>
 
 </main>
+
+<!-- Scroll-to-top button -->
+<button id="toTop" aria-label="Back to top">&uarr;</button>
 
 <footer>
   <p>Pixels String &middot; ISC License &middot; <a class="gh-link" href="https://github.com/shajanjp/pixels-string" target="_blank" rel="noopener" aria-label="Pixels String on GitHub"><span class="gh-icon"><svg viewBox="0 0 16 16" role="img" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span></a></p>
@@ -1155,6 +1276,30 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
     });
   }, { rootMargin: "-40% 0px -55% 0px" });
   sections.forEach((s) => observer.observe(s));
+
+  // Scroll-reveal animations
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("in-view");
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll(".reveal").forEach((el) => revealObserver.observe(el));
+
+  // Shadow the header once the page is scrolled
+  const header = document.querySelector("header");
+  const toTop = document.getElementById("toTop");
+  const onScroll = () => {
+    header.classList.toggle("scrolled", window.scrollY > 8);
+    toTop.classList.toggle("show", window.scrollY > 480);
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // Scroll smoothly to the top
+  toTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 </script>
 
 </body>
