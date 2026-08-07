@@ -555,7 +555,8 @@
   .endpoint-body { padding: 0 18px 18px; display: none; }
   .endpoint.open .endpoint-body { display: block; }
   .endpoint.open .chev { transform: rotate(180deg); }
-  .chev { transition: transform .2s; color: var(--text-dim); margin-left: auto; font-size: 0.75rem; }
+  .chev { display: flex; align-items: center; justify-content: center; transition: transform .2s; color: var(--text-dim); margin-left: auto; flex-shrink: 0; }
+  .chev svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .param-grid { display: grid; gap: 8px; margin: 12px 0; }
   .param-row {
     display: grid;
@@ -994,7 +995,7 @@ node html-to-header.js</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/api/effect?name=&lt;name&gt;</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Set the active effect by name or by numeric index.</p>
@@ -1013,7 +1014,7 @@ GET /api/effect?index=2    # index 2 = Aurora</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/api/variation?index=&lt;0-4&gt;</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Set the variation of the current effect.</p>
@@ -1029,7 +1030,7 @@ GET /api/effect?index=2    # index 2 = Aurora</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/api/power?state=&lt;on|off&gt;</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Turn the LEDs on or off.</p>
@@ -1045,7 +1046,7 @@ GET /api/effect?index=2    # index 2 = Aurora</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/api/brightness?value=&lt;0-255&gt;</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Set the global LED brightness. Applied to every effect and pattern, and saved to NVS so it persists across reboots. <code>0</code> turns the LEDs off, <code>255</code> is maximum. Read the current value from <code>/api/info</code>.</p>
@@ -1061,7 +1062,7 @@ GET /api/effect?index=2    # index 2 = Aurora</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/api/info</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Returns a JSON object with the current device state.</p>
@@ -1087,7 +1088,7 @@ GET /api/effect?index=2    # index 2 = Aurora</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/config?colorOrder=&lt;order&gt;&amp;ledCount=&lt;n&gt;</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Read or set the device configuration. Without parameters it returns the current config as JSON. Parameters apply immediately, are saved to NVS, and persist across reboots. Either or both parameters can be combined in one request.</p>
@@ -1130,7 +1131,7 @@ GET /config?colorOrder=GRB&ledCount=120  # both at once</pre>
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/api/pixels/set?pattern=&lt;p&gt;&amp;color=RRGGBB...[&amp;brightness=0-255][&amp;percentage=0-100]</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Set pixel colors with customizable patterns. All parameters are passed as query strings.</p>
@@ -1181,7 +1182,7 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
       <div class="endpoint-head" onclick="toggleEndpoint(this)">
         <span class="method m-get">GET</span>
         <span class="path">/help</span>
-        <span class="chev">&#9660;</span>
+        <span class="chev"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
       </div>
       <div class="endpoint-body">
         <p class="endpoint-desc">Plain-text listing of all available endpoints. Handy when working on a headless device.</p>
