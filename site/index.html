@@ -418,6 +418,35 @@
   h2 .hash { color: var(--accent); -webkit-text-fill-color: var(--accent); }
   .section-sub { color: var(--text-dim); max-width: 720px; margin-bottom: 32px; }
   h3 { font-size: 1.1rem; margin: 28px 0 12px; }
+  .sub-block { margin-top: 56px; }
+  .sub-block > h3 .hash {
+    color: var(--accent);
+    -webkit-text-fill-color: var(--accent);
+  }
+  .sub-block > h3.sub-title,
+  .sub-block > h3:has(> .hash) {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-family: inherit;
+    margin: 0 0 8px;
+    padding-top: 24px;
+    background: linear-gradient(120deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    width: fit-content;
+  }
+  .sub-block > h3:has(> .hash)::before {
+    content: "";
+    display: block;
+    height: 1px;
+    width: 100%;
+    background: var(--border);
+    margin-bottom: 22px;
+  }
+  .sub-desc { color: var(--text-dim); margin-bottom: 24px; }
+  .sub-block .sub-desc + * { margin-top: 0; }
   p { margin-bottom: 14px; }
   a { color: var(--accent-3); }
   .muted { color: var(--text-dim); }
@@ -649,14 +678,9 @@
     </button>
     <div class="nav-links" id="navLinks">
       <a href="#overview">Overview</a>
-      <a href="#features">Features</a>
-      <a href="#hardware">Hardware</a>
-      <a href="#setup">Setup</a>
-      <a href="#configuration">Configuration</a>
-      <a href="#usage">Usage</a>
-      <a href="#api">REST API</a>
-      <a href="#mcp">MCP</a>
-      <a href="#effects">Effects</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#control">Control &amp; API</a>
+      <a href="#structure">Project</a>
     </div>
   </nav>
 </header>
@@ -666,8 +690,8 @@
   <h1>Pixels String</h1>
   <p>A WiFi-enabled ESP32 LED pixel string controller with <strong>23 stunning effects</strong>, <strong>5 variations per effect</strong>, a physical button interface, an embedded web dashboard for browser-based control, and native <strong>MCP support</strong> for AI assistants.</p>
   <div class="hero-ctas">
-    <a class="btn btn-primary" href="#setup">Get Started</a>
-    <a class="btn btn-ghost" href="#api">View REST API</a>
+    <a class="btn btn-primary" href="#quickstart">Get Started</a>
+    <a class="btn btn-ghost" href="#control">View REST API</a>
   </div>
   <div class="hero-features">
     <span class="feature-chip"><span class="ficon c-blue">ESP</span>ESP32 Powered</span>
@@ -691,13 +715,11 @@
 </div>
 
 <main>
-
-  <!-- ================= OVERVIEW ================= -->
   <section id="overview">
     <h2 class="reveal"><span class="hash">#</span> Overview</h2>
     <p class="section-sub reveal" style="--delay:.1s">Pixels String turns an ESP32 dev board and a NeoPixel-compatible LED strip into a self-contained ambient lighting system. It runs fully on-device, with no cloud services or phone apps required.</p>
 
-    <p>The device hosts its own web dashboard directly from the ESP32, so any browser on your network can control every effect, variation, color, and brightness. A <a href="#hardware">physical button</a> gives you the same control without a browser. A complete <a href="#api">REST API</a> lets you integrate the strip into scripts, home automation, or other projects.</p>
+    <p>The device hosts its own web dashboard directly from the ESP32, so any browser on your network can control every effect, variation, color, and brightness. A <a href="#quickstart">physical button</a> gives you the same control without a browser. A complete <a href="#control">REST API</a> lets you integrate the strip into scripts, home automation, or other projects.</p>
 
     <p>All settings are persisted in NVS (non-volatile storage), so your LED count, color order, brightness, and active effect survive reboots and power loss. WiFi is monitored continuously and reconnects automatically.</p>
 
@@ -714,13 +736,11 @@
       <li>Persistent LED count, color order, and brightness via NVS</li>
       <li>WiFi auto-reconnect with 10-second retry loop</li>
     </ul>
-  </section>
 
-  <!-- ================= FEATURES ================= -->
-  <section id="features">
-    <h2 class="reveal"><span class="hash">#</span> Features</h2>
-    <p class="section-sub reveal" style="--delay:.1s">Everything the controller does out of the box.</p>
-    <div class="grid">
+    <div class="sub-block reveal">
+      <h3>Features &amp; Capabilities</h3>
+      <p class="sub-desc">Everything the controller does out of the box.</p>
+      <div class="grid">
       <div class="card reveal" style="--delay:.05s">
         <div class="icon c-purple">23</div>
         <h3>23 LED Effects</h3>
@@ -767,11 +787,52 @@
         <p>WiFi is monitored continuously and reconnects automatically with a 10-second retry loop, keeping the dashboard and API reachable.</p>
       </div>
     </div>
+    </div>
+
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> Effects &amp; Variations</h3>
+    <p class="section-sub reveal" style="--delay:.1s">All 23 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Effect</th><th>Variations</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td><code>FIREFLIES</code></td><td>1 / 2 / 3 / 5 / 8 fireflies (speed scales with count)</td></tr>
+          <tr><td>1</td><td><code>RAINBOW_SWIPE</code></td><td>Forward / Reverse / Fast / Slow / Medium+Forward</td></tr>
+          <tr><td>2</td><td><code>AURORA</code></td><td>Blue-green / Warm / Cool violet / Pink-green / Rainbow-tinted</td></tr>
+          <tr><td>3</td><td><code>COMET</code></td><td>Position-hue / Fixed hue / Time-hue / White / Rainbow tail</td></tr>
+          <tr><td>4</td><td><code>CHASING_DOTS</code></td><td>2 / 3 / 4 / 5 / 6 chasers</td></tr>
+          <tr><td>5</td><td><code>CYLON</code></td><td>Hue shift at ends / Hue shift+ / Time-hue / White / Red</td></tr>
+          <tr><td>6</td><td><code>DUAL_COMET</code></td><td>White flash / Rainbow flash / Color-ring flash / Yellow / Red flash</td></tr>
+          <tr><td>7</td><td><code>SPARKLE_SWEEP</code></td><td>Density and width combos (5 variations)</td></tr>
+          <tr><td>8</td><td><code>POLICE</code></td><td>Alternating / Split halves / Three-segment / All flash / Sweeping</td></tr>
+          <tr><td>9</td><td><code>PLASMA</code></td><td>2 / 3 / 4 / 5 / 5 blobs (wider)</td></tr>
+          <tr><td>10</td><td><code>RAINBOW_GRADIENT</code></td><td>Window size 6 / 10 / 14 / 18 / 22</td></tr>
+          <tr><td>11</td><td><code>PULSE_WAVE</code></td><td>Sigma &amp; speed combinations (5 variations)</td></tr>
+          <tr><td>12</td><td><code>SINGLE_RUNNER</code></td><td>Random hue / Rainbow-position / Time-hue / White / Tail trail</td></tr>
+          <tr><td>13</td><td><code>AUDIO_VISUALIZER</code></td><td>Simulated spectrum analyzers with varying band counts &amp; styles</td></tr>
+          <tr><td>14</td><td><code>HEARTBEAT</code></td><td>Mac breathing / Lub-dub center / Alternating side / Travelling / Dual pulse</td></tr>
+          <tr><td>15</td><td><code>TWINKLE</code></td><td>White slow / Golden / Multicolor / Dense fast / Cold blue + supernovae</td></tr>
+          <tr><td>16</td><td><code>FIRE_FLICKER</code></td><td>Candle / Campfire / Inferno / Blue flame / Rainbow fire</td></tr>
+          <tr><td>17</td><td><code>BOUNCING_BALLS</code></td><td>1 slow ball / 2 balls / 3 sized balls / 4 white with trails / 5 rainbow elastic</td></tr>
+          <tr><td>18</td><td><code>LIGHTNING_STORM</code></td><td>Full-strip flash / Random segments / Rolling wave / Violet afterglow / Frequent storm</td></tr>
+          <tr><td>19</td><td><code>KALEIDOSCOPE</code></td><td>2-fold mirror / 4-fold twinkle / 8-fold plasma / Rotating washes / Laser-show centre</td></tr>
+          <tr><td>20</td><td><code>COLLIDING_FILL</code></td><td>Classic ends-inward / Colour swap / Teleport fill / Random side / Center-out fill</td></tr>
+          <tr><td>21</td><td><code>PAINT_SPLAT</code></td><td>Classic mix / Splash burst / Lava lamp / Rainbow bands / Galactic stars</td></tr>
+          <tr><td>22</td><td><code>SNAKE</code></td><td>Classic green / Speed boost / Rainbow / Obstacle course / Poison food</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">Variations are indexed <code>0-4</code>. The <code>STATIC_PIXEL</code> effect used internally by <code>/api/pixels/set</code> has a single variation and is not listed above.</div>
+    </div>
   </section>
 
-  <!-- ================= HARDWARE ================= -->
-  <section id="hardware">
-    <h2 class="reveal"><span class="hash">#</span> Hardware Requirements</h2>
+  <section id="quickstart">
+    <h2 class="reveal"><span class="hash">#</span> Quick Start</h2>
+    <p class="section-sub reveal" style="--delay:.1s">From a fresh clone to a glowing strip - requirements, wiring, setup, and configuration.</p>
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> Hardware Requirements</h3>
     <p class="section-sub reveal" style="--delay:.1s">You need an ESP32, an LED strip, and a power supply. Everything else is optional.</p>
     <ul class="checklist">
       <li>ESP32 development board</li>
@@ -793,11 +854,11 @@
       </table>
     </div>
     <div class="note warn">The software limit is <code>MAX_LEDS = 300</code> in <code>globals.h</code>. Adjust it if your hardware supports fewer or more, within ESP32 memory constraints.</div>
-  </section>
+  
+    </div>
 
-  <!-- ================= SETUP ================= -->
-  <section id="setup">
-    <h2 class="reveal"><span class="hash">#</span> Getting Started</h2>
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> Getting Started</h3>
     <p class="section-sub reveal" style="--delay:.1s">From a fresh clone to a glowing strip in five steps.</p>
 
     <h3>1. Clone and configure</h3>
@@ -848,11 +909,11 @@ node html-to-header.js</pre>
       <li>Check your router's DHCP client list for the static IP you configured</li>
       <li>Or use mDNS: <code>http://pixels-string.local</code></li>
     </ul>
-  </section>
+  
+    </div>
 
-  <!-- ================= CONFIGURATION ================= -->
-  <section id="configuration">
-    <h2 class="reveal"><span class="hash">#</span> Configuration</h2>
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> Configuration</h3>
     <p class="section-sub reveal" style="--delay:.1s">What lives in config.h and what can be changed at runtime.</p>
 
     <h3>Network settings (config.h)</h3>
@@ -873,7 +934,7 @@ node html-to-header.js</pre>
     </div>
 
     <h3>Runtime settings (persisted in NVS)</h3>
-    <p>These are configured via the <a href="#api">API</a> and survive reboots:</p>
+    <p>These are configured via the <a href="#control">API</a> and survive reboots:</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -887,11 +948,15 @@ node html-to-header.js</pre>
       </table>
     </div>
     <div class="note">Why color order matters: some strips wire channels as RGB, others as GRB, BRG, BGR, and so on. If colors look swapped, set the correct order via <code>/config?colorOrder=...</code> - it applies immediately and is saved to NVS.</div>
+  
+    </div>
   </section>
 
-  <!-- ================= USAGE ================= -->
-  <section id="usage">
-    <h2 class="reveal"><span class="hash">#</span> Using the Device</h2>
+  <section id="control">
+    <h2 class="reveal"><span class="hash">#</span> Control &amp; API</h2>
+    <p class="section-sub reveal" style="--delay:.1s">The web dashboard, the physical button, the REST API, and MCP for AI assistants.</p>
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> Using the Device</h3>
     <p class="section-sub reveal" style="--delay:.1s">Control the strip two ways: the web dashboard or the physical button.</p>
 
     <h3>Web dashboard</h3>
@@ -916,11 +981,11 @@ node html-to-header.js</pre>
         </tbody>
       </table>
     </div>
-  </section>
+  
+    </div>
 
-  <!-- ================= REST API ================= -->
-  <section id="api">
-    <h2 class="reveal"><span class="hash">#</span> REST API</h2>
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> REST API</h3>
     <p class="section-sub reveal" style="--delay:.1s">All endpoints are served on port 80 and accept plain <code>GET</code> requests with query parameters. JSON endpoints return readable, unescaped JSON for easy parsing.</p>
     <div class="note">Tip: run <code>GET /help</code> on the device for a plain-text listing of every available endpoint.</div>
 
@@ -1122,11 +1187,11 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
         <p class="endpoint-desc">Plain-text listing of all available endpoints. Handy when working on a headless device.</p>
       </div>
     </div>
-  </section>
+  
+    </div>
 
-  <!-- ================= MCP ================= -->
-  <section id="mcp">
-    <h2 class="reveal"><span class="hash">#</span> MCP (Model Context Protocol)</h2>
+    <div class="sub-block reveal">
+    <h3><span class="hash">#</span> MCP (Model Context Protocol)</h3>
     <p class="section-sub reveal" style="--delay:.1s">The device speaks the Model Context Protocol over HTTP, so AI assistants can control the LEDs directly.</p>
 
     <p>The ESP32 hosts a minimal MCP server at <code>POST /mcp</code> (JSON-RPC 2.0). Register it as a remote MCP server in any MCP client - Claude Desktop, MCP Inspector, and others - using the device URL:</p>
@@ -1182,49 +1247,10 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
     </div>
 
     <div class="note">No session or SSE stream is required: each request is answered with a JSON-RPC response and the connection closes, so the endpoint works with any MCP client that supports HTTP servers.</div>
-  </section>
-
   
-  <!-- ================= EFFECTS ================= -->
-  <section id="effects">
-    <h2 class="reveal"><span class="hash">#</span> Effects &amp; Variations</h2>
-    <p class="section-sub reveal" style="--delay:.1s">All 23 effects and what each variation does. Set any effect with <code>/api/effect?name=...</code> or by index.</p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>#</th><th>Effect</th><th>Variations</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>0</td><td><code>FIREFLIES</code></td><td>1 / 2 / 3 / 5 / 8 fireflies (speed scales with count)</td></tr>
-          <tr><td>1</td><td><code>RAINBOW_SWIPE</code></td><td>Forward / Reverse / Fast / Slow / Medium+Forward</td></tr>
-          <tr><td>2</td><td><code>AURORA</code></td><td>Blue-green / Warm / Cool violet / Pink-green / Rainbow-tinted</td></tr>
-          <tr><td>3</td><td><code>COMET</code></td><td>Position-hue / Fixed hue / Time-hue / White / Rainbow tail</td></tr>
-          <tr><td>4</td><td><code>CHASING_DOTS</code></td><td>2 / 3 / 4 / 5 / 6 chasers</td></tr>
-          <tr><td>5</td><td><code>CYLON</code></td><td>Hue shift at ends / Hue shift+ / Time-hue / White / Red</td></tr>
-          <tr><td>6</td><td><code>DUAL_COMET</code></td><td>White flash / Rainbow flash / Color-ring flash / Yellow / Red flash</td></tr>
-          <tr><td>7</td><td><code>SPARKLE_SWEEP</code></td><td>Density and width combos (5 variations)</td></tr>
-          <tr><td>8</td><td><code>POLICE</code></td><td>Alternating / Split halves / Three-segment / All flash / Sweeping</td></tr>
-          <tr><td>9</td><td><code>PLASMA</code></td><td>2 / 3 / 4 / 5 / 5 blobs (wider)</td></tr>
-          <tr><td>10</td><td><code>RAINBOW_GRADIENT</code></td><td>Window size 6 / 10 / 14 / 18 / 22</td></tr>
-          <tr><td>11</td><td><code>PULSE_WAVE</code></td><td>Sigma &amp; speed combinations (5 variations)</td></tr>
-          <tr><td>12</td><td><code>SINGLE_RUNNER</code></td><td>Random hue / Rainbow-position / Time-hue / White / Tail trail</td></tr>
-          <tr><td>13</td><td><code>AUDIO_VISUALIZER</code></td><td>Simulated spectrum analyzers with varying band counts &amp; styles</td></tr>
-          <tr><td>14</td><td><code>HEARTBEAT</code></td><td>Mac breathing / Lub-dub center / Alternating side / Travelling / Dual pulse</td></tr>
-          <tr><td>15</td><td><code>TWINKLE</code></td><td>White slow / Golden / Multicolor / Dense fast / Cold blue + supernovae</td></tr>
-          <tr><td>16</td><td><code>FIRE_FLICKER</code></td><td>Candle / Campfire / Inferno / Blue flame / Rainbow fire</td></tr>
-          <tr><td>17</td><td><code>BOUNCING_BALLS</code></td><td>1 slow ball / 2 balls / 3 sized balls / 4 white with trails / 5 rainbow elastic</td></tr>
-          <tr><td>18</td><td><code>LIGHTNING_STORM</code></td><td>Full-strip flash / Random segments / Rolling wave / Violet afterglow / Frequent storm</td></tr>
-          <tr><td>19</td><td><code>KALEIDOSCOPE</code></td><td>2-fold mirror / 4-fold twinkle / 8-fold plasma / Rotating washes / Laser-show centre</td></tr>
-          <tr><td>20</td><td><code>COLLIDING_FILL</code></td><td>Classic ends-inward / Colour swap / Teleport fill / Random side / Center-out fill</td></tr>
-          <tr><td>21</td><td><code>PAINT_SPLAT</code></td><td>Classic mix / Splash burst / Lava lamp / Rainbow bands / Galactic stars</td></tr>
-          <tr><td>22</td><td><code>SNAKE</code></td><td>Classic green / Speed boost / Rainbow / Obstacle course / Poison food</td></tr>
-        </tbody>
-      </table>
     </div>
-    <div class="note">Variations are indexed <code>0-4</code>. The <code>STATIC_PIXEL</code> effect used internally by <code>/api/pixels/set</code> has a single variation and is not listed above.</div>
   </section>
 
-  <!-- ================= STRUCTURE ================= -->
   <section id="structure">
     <h2 class="reveal"><span class="hash">#</span> Project Structure</h2>
     <p class="section-sub reveal" style="--delay:.1s">A quick map of the repository.</p>
@@ -1251,7 +1277,9 @@ GET /api/pixels/set?pattern=gradient&color=FF0000&color=0000FF&percentage=50</pr
     └── site.webmanifest   # Web app manifest</pre>
     <div class="note">All sketch files are compiled as a single translation unit: <code>pixels-string.ino</code> includes the module headers and defines the shared globals they reference via <code>globals.h</code>.</div>
     </div>
+  
   </section>
+
 
 </main>
 
